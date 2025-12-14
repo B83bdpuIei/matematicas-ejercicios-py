@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 import os
 import asyncio
@@ -7,7 +8,7 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (Para Render)
+# 🚑 FAKE WEB SERVER (Para que Render no se apague)
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -28,10 +29,10 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 TOKEN = os.environ.get("DISCORD_TOKEN")
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
-GIVEAWAY_CHANNEL_ID = 1449849645495746803
+GIVEAWAY_CHANNEL_ID = 1449849645495746803  # CANAL HELL
 
 # ==========================================
-# ⚙️ SETUP
+# ⚙️ SETUP DEL BOT (MODO SLASH)
 # ==========================================
 intents = discord.Intents.default()
 intents.members = True
@@ -39,18 +40,15 @@ intents.message_content = True
 intents.reactions = True
 intents.presences = True
 
+# Usamos commands.Bot para facilitar la sincronización
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Función para convertir tiempo (ej: 10s, 1m, 1h)
+# Conversor de tiempo (10s, 1m, 1h, 1d)
 def convert_time(time_str):
-    unit = time_str[-1]
-    if unit not in ['s', 'm', 'h', 'd']:
-        return -1
-    try:
-        val = int(time_str[:-1])
-    except:
-        return -2
-        
+    unit = time_str[-1].lower()
+    if unit not in ['s', 'm', 'h', 'd']: return -1
+    try: val = int(time_str[:-1])
+    except: return -2
     if unit == 's': return val
     if unit == 'm': return val * 60
     if unit == 'h': return val * 3600
@@ -58,73 +56,96 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# 🎁 COMANDO DE SORTEOS (NUEVO)
+# 🎁 COMANDO SLASH: /start
 # ==========================================
-@bot.command(name="gstart")
-@commands.has_permissions(administrator=True)
-async def gstart(ctx, duration: str, *, prize: str):
-    """
-    Uso: !gstart 10m 100€ PayPal
-    Crea un sorteo que usa Reacciones, compatible con el Anti-Cheat.
-    """
-    # 1. Borramos el comando del admin para limpiar
-    await ctx.message.delete()
-
-    seconds = convert_time(duration)
-    if seconds < 0:
-        await ctx.send("❌ Error en el tiempo. Usa s/m/h/d (ej: 10m).", delete_after=5)
+@bot.tree.command(name="start", description="Inicia un sorteo (Modo Hell automático según el canal)")
+@app_commands.describe(tiempo="Duración (ej: 10m, 24h)", premio="Qué se sortea")
+async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
+    # Solo administradores pueden usarlo
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
 
-    # 2. Crear el Embed del Sorteo
+    seconds = convert_time(tiempo)
+    if seconds <= 0:
+        await interaction.response.send_message("❌ Tiempo inválido. Usa formato: 10s, 30m, 24h", ephemeral=True)
+        return
+
+    # DETECCIÓN AUTOMÁTICA DE CANAL
+    es_canal_hell = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
+
+    if es_canal_hell:
+        # --- MODO HELL (ROJO + ANTI-CHEAT) ---
+        color = 0xff0000
+        titulo = "🔥 **HELL SPONSOR GIVEAWAY** 🔥"
+        footer = "⚠️ ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick"
+    else:
+        # --- MODO NORMAL (VERDE + CHILL) ---
+        color = 0x00ff00
+        titulo = "🎉 **GIVEAWAY** 🎉"
+        footer = "Good luck to everyone!"
+
     embed = discord.Embed(
-        title="🎉 **GIVEAWAY TIME** 🎉",
-        description=f"Prize: **{prize}**\nTime: **{duration}**\n\nReact with 🎉 to enter!",
-        color=0xff0000 # Color Rojo Hell
+        title=titulo,
+        description=f"Prize: **{premio}**\nTime: **{tiempo}**\n\nReact with 🎉 to enter!",
+        color=color
     )
-    embed.set_footer(text="Anti-Cheat System Active: If you remove the tag, you are removed.")
-    
-    # 3. Enviar mensaje y poner reacción
-    msg = await ctx.send(embed=embed)
+    embed.set_footer(text=footer)
+
+    # Enviamos el sorteo
+    await interaction.response.send_message(embed=embed)
+    msg = await interaction.original_response() # Obtenemos el mensaje real
     await msg.add_reaction("🎉")
 
-    # 4. Esperar el tiempo
+    # Esperamos el tiempo
     await asyncio.sleep(seconds)
 
-    # 5. Elegir ganador
-    new_msg = await ctx.channel.fetch_message(msg.id) # Refrescar mensaje
+    # --- FINALIZAR SORTEO ---
+    try:
+        msg = await interaction.channel.fetch_message(msg.id)
+    except: return
+
     users = []
-    
-    # Recoger usuarios válidos
-    for reaction in new_msg.reactions:
+    for reaction in msg.reactions:
         if str(reaction.emoji) == "🎉":
             async for user in reaction.users():
-                if not user.bot:
-                    users.append(user)
+                if not user.bot: users.append(user)
     
-    if len(users) > 0:
+    if users:
         winner = random.choice(users)
+        await interaction.channel.send(f"👑 **WINNER:** {winner.mention} won **{premio}**!")
         
-        # Embed de victoria
-        win_embed = discord.Embed(
-            title="👑 **WE HAVE A WINNER** 👑",
-            description=f"Congratulations {winner.mention}!\nYou won: **{prize}**",
-            color=0x00ff00
-        )
-        await ctx.send(content=f"{winner.mention}", embed=win_embed)
-        
-        # Editar el sorteo original para decir que acabó
         embed.description += f"\n\n🏆 **Winner:** {winner.mention}"
+        embed.color = 0xffd700 # Dorado al acabar
         await msg.edit(embed=embed)
     else:
-        await ctx.send("❌ No one entered the giveaway.")
+        await interaction.channel.send("❌ No participants.")
 
 # ==========================================
-# 🚀 EVENTOS (ANTI-CHEAT)
+# 🚀 EVENTOS + ANTI-CHEAT
 # ==========================================
+
 @bot.event
 async def on_ready():
     print(f"🔥 SISTEMA HELL ONLINE - {bot.user}")
-    print("------------------------------------------------")
+    print("🔄 Sincronizando comandos Slash...")
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Se han sincronizado {len(synced)} comandos Slash.")
+    except Exception as e:
+        print(f"❌ Error sincronizando: {e}")
+    
+    # --- ESCÁNER DE INICIO ---
+    # Revisa a la gente que ya tiene el nombre al encenderse
+    for guild in bot.guilds:
+        role = guild.get_role(SUPPORT_ROLE_ID)
+        if role:
+            for member in guild.members:
+                name_check = member.global_name if member.global_name else member.name
+                if name_check and SUPPORT_TEXT.lower() in name_check.lower():
+                    if role not in member.roles:
+                        try: await member.add_roles(role)
+                        except: pass
 
 @bot.event
 async def on_member_update(before, after):
@@ -138,33 +159,35 @@ async def on_member_update(before, after):
     name_has_tag = SUPPORT_TEXT.lower() in name_check.lower()
     has_role = role in after.roles
 
-    if name_has_tag == has_role: return
+    if name_has_tag == has_role: return # Sin cambios
 
     # --- DAR ROL ---
     if name_has_tag and not has_role:
-        try:
-            await after.add_roles(role)
-            print(f"[+] ROL DADO: {name_check}")
+        try: await after.add_roles(role)
         except: pass
 
-    # --- QUITAR ROL Y BORRAR DEL SORTEO ---
+    # --- QUITAR ROL Y REVISAR SORTEOS (ANTI-CHEAT) ---
     elif not name_has_tag and has_role:
         try:
             await after.remove_roles(role)
             print(f"[-] ROL QUITADO: {name_check}")
             
-            # Buscamos en el canal de sorteos
+            # Solo revisamos el CANAL HELL para borrar reacciones
+            # Los sorteos normales en otros canales NO se tocan
             giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
             if giveaway_channel:
                 async for message in giveaway_channel.history(limit=20):
-                    # Solo miramos mensajes del propio bot (los sorteos)
-                    if message.author == bot.user:
-                        for reaction in message.reactions:
-                            if str(reaction.emoji) == "🎉":
-                                try:
-                                    await message.remove_reaction("🎉", after)
-                                    print(f"   [x] SACADO DEL SORTEO: {name_check}")
-                                except: pass
+                    # Verificamos que sea un mensaje del bot y tenga el Embed Rojo/Anti-Cheat
+                    if message.author == bot.user and message.embeds:
+                        embed = message.embeds[0]
+                        # Doble verificación: Está en el canal correcto Y tiene el footer de aviso
+                        if "ANTI-CHEAT" in (embed.footer.text or ""):
+                            for reaction in message.reactions:
+                                if str(reaction.emoji) == "🎉":
+                                    try:
+                                        await message.remove_reaction("🎉", after)
+                                        print(f"   [x] KICKED FROM GIVEAWAY: {name_check}")
+                                    except: pass
         except: pass
 
 if __name__ == "__main__":
