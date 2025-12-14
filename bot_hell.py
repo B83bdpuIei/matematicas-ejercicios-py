@@ -1,51 +1,88 @@
 import discord
 from discord.ext import commands
 import os
-from flask import Flask  # <--- NUEVO
-import threading         # <--- NUEVO
 
-# --- CONFIGURACIÓN DE SEGURIDAD ---
-TOKEN = os.getenv('DISCORD_TOKEN')
+# ==========================================
+# 🔐 SEGURIDAD: VARIABLES DE ENTORNO
+# ==========================================
+# AHORA BUSCA LA VARIABLE CORRECTA: "DISCORD_TOKEN"
+TOKEN = os.environ.get("DISCORD_TOKEN")
 
-# --- TUS IDs ---
-TAG_SERVIDOR = "! HELL"
-ID_ROL_VIP = 123456789       # <--- ¡Asegúrate de que aquí siguen tus IDs reales!
-ID_CANAL_LOGS = 123456789    # <--- ¡Asegúrate de que aquí siguen tus IDs reales!
+if not TOKEN:
+    print("❌ ERROR: No encuentro la variable 'DISCORD_TOKEN' en el entorno.")
+    exit()
 
-# Configuración colores
-COLOR_HELL = 0x8B0000
+# ==========================================
+# 🔥 CONFIGURACIÓN DE HELL
+# ==========================================
+SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
+SUPPORT_ROLE_ID = 1336477737594130482
+GIVEAWAY_CHANNEL_ID = 1449849645495746803
 
+# ==========================================
+# ⚙️ PREPARACIÓN DEL BOT
+# ==========================================
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
+intents.reactions = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-# --- (AQUÍ VA TODO EL CÓDIGO DE TUS EVENTOS Y COMANDOS IGUAL QUE ANTES) ---
-# ... (on_ready, on_member_update, reglas, etc...)
-# NO CAMBIES NADA DE TUS COMANDOS, DÉJALOS IGUAL
+# ==========================================
+# 🚀 EVENTOS
+# ==========================================
 
+@bot.event
+async def on_ready():
+    print(f"🔥 SISTEMA HELL ONLINE")
+    print(f"Conectado como: {bot.user}")
+    print(f"Rastreando: {SUPPORT_TEXT}")
+    print("------------------------------------------------")
 
-# --- 🛑 BLOQUE NUEVO: EL SERVIDOR FALSO PARA RENDER 🛑 ---
-# Pega esto justo ANTES de la última línea (bot.run)
+@bot.event
+async def on_member_update(before, after):
+    if before.display_name == after.display_name:
+        return
 
-app = Flask(__name__)
+    guild = after.guild
+    role = guild.get_role(SUPPORT_ROLE_ID)
+    
+    if not role:
+        print(f"[ERROR] Rol {SUPPORT_ROLE_ID} no encontrado.")
+        return
 
-@app.route('/')
-def home():
-    return "🔥 HELL KEEPER ESTÁ VIVO Y VIGILANDO."
+    name_has_tag = SUPPORT_TEXT.lower() in after.display_name.lower()
+    has_role = role in after.roles
 
-def run_web_server():
-    # Render nos da un puerto específico, lo usamos aquí
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    # --- CASO A: PONE EL NOMBRE ---
+    if name_has_tag and not has_role:
+        try:
+            await after.add_roles(role)
+            print(f"[+] ROL DADO a: {after.display_name}")
+        except discord.Forbidden:
+            print(f"[!] ERROR PERMISOS: Sube el rol del Bot.")
 
-def keep_alive():
-    t = threading.Thread(target=run_web_server)
-    t.start()
+    # --- CASO B: QUITA EL NOMBRE (Anti-Cheat) ---
+    elif not name_has_tag and has_role:
+        try:
+            await after.remove_roles(role)
+            print(f"[-] ROL QUITADO a: {after.display_name}")
+            
+            giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
+            if giveaway_channel:
+                async for message in giveaway_channel.history(limit=20):
+                    for reaction in message.reactions:
+                        try:
+                            await message.remove_reaction(reaction.emoji, after)
+                            print(f"   [x] REACCIÓN BORRADA de {after.display_name}")
+                        except:
+                            pass
+            else:
+                print(f"[!] ERROR: Canal sorteos no encontrado.")
 
-# Encendemos la web falsa
-keep_alive()
+        except discord.Forbidden:
+            print(f"[!] PERMISOS: No puedo gestionar a {after.display_name}.")
 
-# Encendemos el bot (ESTA DEBE SER SIEMPRE LA ÚLTIMA LÍNEA)
-bot.run(TOKEN)
+if __name__ == "__main__":
+    bot.run(TOKEN)
