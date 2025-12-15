@@ -35,7 +35,7 @@ SUPPORT_ROLE_ID = 1336477737594130482
 
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819      
-CMD_CHANNEL_ID = 1449346777659609288        # <--- ¡ID CORREGIDO!
+CMD_CHANNEL_ID = 1449346777659609288
 
 # --- LISTA DE COMANDOS (Menú Fijo) ---
 COMMAND_LIST_TEXT = """
@@ -65,7 +65,7 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# 📊 COMANDO: /finish_polls (CON PAGINACIÓN)
+# 📊 COMANDO: /finish_polls (FORMATO COMPACTO)
 # ==========================================
 @bot.tree.command(name="finish_polls", description="Publica resultados del último lote de votaciones.")
 async def finish_polls(interaction: discord.Interaction):
@@ -73,7 +73,6 @@ async def finish_polls(interaction: discord.Interaction):
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
 
-    # Defer para evitar timeout mientras procesa
     await interaction.response.defer()
 
     polls_channel = bot.get_channel(POLLS_CHANNEL_ID)
@@ -99,22 +98,31 @@ async def finish_polls(interaction: discord.Interaction):
         winner_reaction = max(message.reactions, key=lambda r: r.count)
         
         if winner_reaction.count > 1:
-            question = message.content[:100] + "..." if len(message.content) > 100 else message.content
-            results_text += f"\n⚫ **{question}**\n👉 **Winner:** {winner_reaction.emoji} ({winner_reaction.count} votes)\n━━━━━━━━━━━━━━━━━━━━\n"
+            # Limpieza básica del texto para que no quede raro
+            question = message.content.strip()
+            # Quitamos asteriscos extra si el usuario los puso manual, para ponerlos nosotros bien
+            question_clean = question.replace("**", "")
+            
+            # Cortamos si es muy largo
+            if len(question_clean) > 80:
+                question_clean = question_clean[:80] + "..."
+
+            # --- FORMATO "Buff Carcha : No y ya" ---
+            # ⚫ **Pregunta**: Emoji (Votos)
+            results_text += f"⚫ **{question_clean}**: {winner_reaction.emoji} ({winner_reaction.count})\n"
             count += 1
 
     if count == 0:
         await interaction.followup.send("⚠️ No encontré votaciones recientes.")
         return
 
-    # --- AQUÍ ESTÁ EL CAMBIO PARA ARREGLAR EL ERROR DE LÍMITE ---
-    MAX_LENGTH = 4000 # Margen de seguridad (Discord permite 4096)
+    # --- Lógica de Paginación (Anti-Crash 4096) ---
+    MAX_LENGTH = 4000 
 
-    # Caso 1: El texto es corto (funciona como antes)
     if len(results_text) <= MAX_LENGTH:
         embed = discord.Embed(
-            title="👑 **POLL RESULTS / RESULTADOS** 👑",
-            description=f"Here are the final results for **{reference_date}**:\n{results_text}",
+            title="👑 **POLL RESULTS / RESULTADOS**",
+            description=f"**(Fecha: {reference_date})**\n\n{results_text}",
             color=0xff0000
         )
         embed.set_footer(text="Community Voice • Hell Legion")
@@ -122,21 +130,19 @@ async def finish_polls(interaction: discord.Interaction):
             embed.set_thumbnail(url=bot.user.avatar.url)
         await interaction.followup.send(embed=embed)
 
-    # Caso 2: El texto es largo (Lo dividimos en partes)
     else:
         partes = [results_text[i:i+MAX_LENGTH] for i in range(0, len(results_text), MAX_LENGTH)]
         
         for i, parte in enumerate(partes):
             embed = discord.Embed(
                 title=f"👑 **POLL RESULTS** (Parte {i+1}/{len(partes)})",
-                description=f"**(Fecha: {reference_date})**\n{parte}",
+                description=f"**(Fecha: {reference_date})**\n\n{parte}",
                 color=0xff0000
             )
             embed.set_footer(text="Community Voice • Hell Legion")
             if bot.user.avatar:
                 embed.set_thumbnail(url=bot.user.avatar.url)
             
-            # Enviamos cada parte como un mensaje nuevo
             await interaction.followup.send(embed=embed)
 
 # ==========================================
@@ -144,27 +150,17 @@ async def finish_polls(interaction: discord.Interaction):
 # ==========================================
 @bot.event
 async def on_message(message):
-    
-    # --- LÓGICA DE LIMPIEZA EN CANAL DE COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
-        
         dont_delete = False
-        
-        # Protegemos el mensaje del MENÚ
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
             title = str(embed.title).upper()
-            if "AVAILABLE COMMANDS" in title:
-                dont_delete = True
-            if "GIVEAWAY" in title:
+            if "AVAILABLE COMMANDS" in title or "GIVEAWAY" in title:
                 dont_delete = True
         
-        # Si NO es el menú, se borra en 2 minutos
         if not dont_delete:
-            try:
-                await message.delete(delay=120) 
-            except:
-                pass 
+            try: await message.delete(delay=120) 
+            except: pass 
 
     if message.author.bot: return
     await bot.process_commands(message)
@@ -234,7 +230,6 @@ async def on_ready():
     print("🔄 Sincronizando comandos Slash...")
     await bot.tree.sync()
     
-    # --- MENÚ AUTOMÁTICO DE COMANDOS ---
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
         try:
@@ -256,7 +251,6 @@ async def on_ready():
         except Exception as e:
             print(f"⚠️ Error actualizando menú: {e}")
 
-    # Escáner inicial de roles
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
