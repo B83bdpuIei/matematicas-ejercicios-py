@@ -5,11 +5,12 @@ import os
 import asyncio
 import random
 import threading
+import re
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (Keep-Alive)
+# 🚑 FAKE WEB SERVER
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -37,9 +38,11 @@ GIVEAWAY_CHANNEL_ID = 1449849645495746803
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
 
-# --- MENU TEXT ---
-COMMAND_LIST_TEXT = """
-🔸 **!recipes** - Ver crafteos del server
+# --- TU FLECHA PERSONALIZADA ---
+HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
+
+COMMAND_LIST_TEXT = f"""
+{HELL_ARROW} **!recipes** - Ver crafteos del server
 """
 
 # ==========================================
@@ -65,49 +68,64 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# 🧹 LIMPIEZA DE ENCUESTAS (LÓGICA MEJORADA)
+# 🧠 LÓGICA INTELIGENTE DE ENCUESTAS
 # ==========================================
-def extract_poll_data(content):
+def parse_poll_result(content, winner_emoji):
     """
-    Analiza el mensaje como en tus fotos:
-    1. Busca la línea del título (ignora separadores ---).
-    2. Limpia símbolos como '>' o '**'.
+    1. Extrae la Pregunta (Primera línea con texto).
+    2. Busca la línea que contiene el emoji ganador para extraer el TEXTO de la respuesta.
     """
-    if not content: return None
-    
+    if not content: return None, None
+
     lines = content.split('\n')
     question = "Encuesta"
-    
+    winning_text = "Opción Ganadora"
+    found_option = False
+
+    # 1. Encontrar la pregunta (primera línea útil)
     for line in lines:
         clean = line.strip()
-        # Ignorar líneas vacías o separadores (----)
-        if not clean or set(clean) <= {'-', '_', ' ', '*'}: 
-            continue
-        
-        # Esta es la línea del título
-        question = clean
+        if not clean or set(clean) <= {'-', '_', ' ', '*'}: continue
+        question = clean.replace(">", "").replace("**", "").replace("__", "").strip()
         break
     
-    # Limpieza estética para que quede pro
-    # Quitamos el '>' que usan en otros servers, y las negritas
-    question = question.replace(">", "").replace("**", "").replace("__", "").replace(":", "").strip()
+    # 2. Encontrar el texto de la opción ganadora
+    # Convertimos el emoji ganador a string para buscarlo (ej: "<:A_:1234>" o "🇦")
+    emoji_str = str(winner_emoji)
     
-    if len(question) > 60:
-        question = question[:57] + "..."
-        
-    return question
+    for line in lines:
+        # Si la línea contiene el emoji ganador...
+        if emoji_str in line:
+            # ...Extraemos todo lo que NO sea el emoji
+            clean_option = line.replace(emoji_str, "").strip()
+            # Limpiamos basura extra (guiones, dos puntos)
+            clean_option = clean_option.lstrip(" :-_>").strip()
+            if clean_option:
+                winning_text = clean_option
+                found_option = True
+                break
+    
+    # Si no encontramos el texto (ej: usaron reacción A pero en el texto pusieron :regional_indicator_a:)
+    if not found_option:
+        # Fallback: Ponemos solo el nombre del emoji o "Opción X"
+        winning_text = "Opción Seleccionada"
+
+    # Cortar textos muy largos
+    if len(question) > 50: question = question[:47] + "..."
+    if len(winning_text) > 40: winning_text = winning_text[:37] + "..."
+
+    return question, winning_text
 
 # ==========================================
 # 📊 COMANDO: /finish_polls
 # ==========================================
-@bot.tree.command(name="finish_polls", description="Publica resultados de las votaciones.")
+@bot.tree.command(name="finish_polls", description="Publica resultados detallados.")
 async def finish_polls(interaction: discord.Interaction):
-    # --- SILENCIADOR DE ERRORES 404 ---
+    # --- SILENCIADOR DE ERROR 404 (Anti-Crash) ---
     try:
         await interaction.response.defer()
-    except Exception:
-        # Si el bot estaba dormido y falla la conexión, no hacemos NADA (silencio).
-        # El usuario tendrá que darle otra vez, pero no spameamos la terminal.
+    except:
+        # Si el bot estaba dormido, lo ignoramos (el usuario reintentará)
         return 
 
     if not interaction.user.guild_permissions.administrator:
@@ -123,70 +141,55 @@ async def finish_polls(interaction: discord.Interaction):
     count = 0
     reference_date = None 
     
-    # Leemos historial
     async for message in polls_channel.history(limit=50):
-        if not message.content or not message.reactions:
-            continue 
+        if not message.content or not message.reactions: continue 
 
-        # Ignorar mensajes que sean puras líneas
-        if set(message.content.strip()) <= {'-', '_'}:
-            continue
+        # Ignorar separadores
+        if set(message.content.strip()) <= {'-', '_'}: continue
 
         msg_date = message.created_at.date()
-        if reference_date is None:
-            reference_date = msg_date
-        elif msg_date != reference_date:
-            break 
+        if reference_date is None: reference_date = msg_date
+        elif msg_date != reference_date: break 
 
-        # Ganador
+        # Calcular ganador
         winner_reaction = max(message.reactions, key=lambda r: r.count)
         
         if winner_reaction.count > 1:
-            question = extract_poll_data(message.content)
+            # USAMOS LA NUEVA INTELIGENCIA
+            question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
+            
             if not question: continue
 
-            # --- NUEVO DISEÑO ---
-            # Usamos '🔸' para temática Hell, diferente al '>' de los otros.
-            # Formato: 🔸 Pregunta ➔ Emoji (Votos)
-            results_text += f"🔸 **{question}** ➔ {winner_reaction.emoji} **({winner_reaction.count})**\n"
+            # --- FORMATO FINAL SOLICITADO ---
+            # FlechaAnimada Pregunta: Respuesta (Votos)
+            # Ej: -> Tek Bow: Unbanned (5)
+            
+            # Si el texto de respuesta es genérico, mostramos el emoji, si no, mostramos el texto.
+            final_answer = answer_text if answer_text != "Opción Seleccionada" else f"{winner_reaction.emoji}"
+
+            results_text += f"{HELL_ARROW} **{question}** : {final_answer} **({winner_reaction.count})**\n"
             count += 1
 
     if count == 0:
         await interaction.followup.send("⚠️ No encontré resultados recientes.", ephemeral=True)
         return
 
-    # --- ENVIAR (Paginado) ---
-    MAX_LENGTH = 3500 # Un poco menos para asegurar
-    
-    header_text = f"📢 **POLL RESULTS**\n📅 Date: {reference_date}\n" + "➖"*15 + "\n\n"
+    # --- ENVIAR ---
+    MAX_LENGTH = 3500 
+    header = f"📢 **POLL RESULTS**\n📅 {reference_date}\n\n"
+    full_content = header + results_text
 
-    # Si cabe en uno solo
-    if len(header_text + results_text) <= MAX_LENGTH:
-        embed = discord.Embed(
-            description=header_text + results_text,
-            color=0xff4400 # Naranja rojizo (Hell theme)
-        )
-        embed.set_footer(text="Community Voice • Hell Legion")
+    if len(full_content) <= MAX_LENGTH:
+        embed = discord.Embed(description=full_content, color=0x990000) # Rojo Oscuro
+        embed.set_footer(text="Hell Legion System")
         if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
         await interaction.followup.send(embed=embed)
     else:
-        # Si es muy largo, dividimos
-        full_text = header_text + results_text
-        partes = [full_text[i:i+MAX_LENGTH] for i in range(0, len(full_text), MAX_LENGTH)]
-        
+        partes = [full_content[i:i+MAX_LENGTH] for i in range(0, len(full_content), MAX_LENGTH)]
         for i, parte in enumerate(partes):
-            embed = discord.Embed(
-                description=parte,
-                color=0xff4400
-            )
-            embed.set_footer(text=f"Page {i+1}/{len(partes)} • Hell Legion")
+            embed = discord.Embed(description=parte, color=0x990000)
+            embed.set_footer(text=f"Page {i+1} • Hell Legion System")
             await interaction.followup.send(embed=embed)
-
-# Manejador de error específico para este comando
-@finish_polls.error
-async def finish_polls_error(interaction: discord.Interaction, error):
-    # Esto captura el error si falla ANTES de ejecutar el código
-    pass
 
 # ==========================================
 # 🛡️ GESTOR DE MENSAJES 
@@ -264,37 +267,29 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         await interaction.channel.send("❌ No participants.")
 
 # ==========================================
-# 🚀 STARTUP & MENÚ
+# 🚀 STARTUP
 # ==========================================
 @bot.event
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE - {bot.user}")
-    try:
-        await bot.tree.sync()
-        print("✅ Comandos listos")
-    except Exception as e:
-        print(f"❌ Error sync: {e}")
+    try: await bot.tree.sync()
+    except: pass
     
-    # --- MENÚ PERMANENTE ---
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
         try:
-            # Comprobar si ya existe el menú correcto al final del chat
+            # Check si el menú ya existe
             last_msg = None
-            async for msg in cmd_channel.history(limit=1):
-                last_msg = msg
+            async for msg in cmd_channel.history(limit=1): last_msg = msg
             
             menu_ok = False
             if last_msg and last_msg.author == bot.user and last_msg.embeds:
-                if "AVAILABLE COMMANDS" in (last_msg.embeds[0].title or ""):
-                    menu_ok = True
+                if "AVAILABLE COMMANDS" in (last_msg.embeds[0].title or ""): menu_ok = True
             
             if not menu_ok:
-                print("🔄 Actualizando menú...")
                 async for msg in cmd_channel.history(limit=10):
                     if msg.author == bot.user and msg.embeds:
-                        if "AVAILABLE COMMANDS" in (msg.embeds[0].title or ""):
-                            await msg.delete()
+                        if "AVAILABLE COMMANDS" in (msg.embeds[0].title or ""): await msg.delete()
                 
                 embed = discord.Embed(
                     title="📜 **AVAILABLE COMMANDS / COMANDOS**",
@@ -304,13 +299,8 @@ async def on_ready():
                 embed.set_footer(text="⚠️ Auto-Cleaner Active")
                 if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
                 await cmd_channel.send(embed=embed)
-            else:
-                print("✅ Menú correcto, no se toca.")
+        except: pass
 
-        except Exception as e:
-            print(f"⚠️ Error menú: {e}")
-
-    # Escáner de roles
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
@@ -338,7 +328,7 @@ async def on_member_update(before, after):
     elif not name_has_tag and has_role:
         try:
             await after.remove_roles(role)
-            # Anti-cheat giveaway check
+            # Check anti-cheat
             giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
             if giveaway_channel:
                 async for message in giveaway_channel.history(limit=20):
