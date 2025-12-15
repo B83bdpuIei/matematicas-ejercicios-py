@@ -37,7 +37,7 @@ GIVEAWAY_CHANNEL_ID = 1449849645495746803
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
 
-# --- TU FLECHA ---
+# --- TU FLECHA (La que usaremos para decorar el resultado) ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 
 COMMAND_LIST_TEXT = f"""
@@ -67,49 +67,73 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# 🧠 LÓGICA INTELIGENTE (FIXED)
+# 🧠 LÓGICA INTELIGENTE (VERSIÓN SUPREMA)
 # ==========================================
 def parse_poll_result(content, winner_emoji):
     if not content: return None, None
 
     lines = content.split('\n')
-    question = "Encuesta"
+    question = None
     winning_text = "Opción Seleccionada"
     found_option = False
 
-    # 1. BUSCAR PREGUNTA (Filtro mejorado)
+    # ---------------------------------------------------------
+    # PASO 1: ENCONTRAR LA PREGUNTA (Usando el ID del Emoji)
+    # ---------------------------------------------------------
     for line in lines:
-        # Quitamos basura markdown PRIMERO
-        clean_check = line.replace(">", "").replace("*", "").replace("_", "").replace("-", "").strip()
-        
-        # Si después de limpiar no queda casi nada (menos de 2 letras), es una línea separadora
-        if len(clean_check) < 2: 
-            continue
-        
-        # Si llegamos aquí, es texto real -> Es la pregunta
-        question = line.replace(">", "").replace("*", "").replace("__", "").strip()
-        break
+        # Lógica: Si la línea tiene el ID de la flecha, ES LA PREGUNTA.
+        # Buscamos "1211049707128750080" o "hell_arrow"
+        if "1211049707128750080" in line or "hell_arrow" in line:
+            # Limpiamos el emoji original para quedarnos solo con el texto
+            # Quitamos el formato <a:hell_arrow:123...> y :hell_arrow:
+            temp_q = re.sub(r'<a?:hell_arrow:[0-9]+>', '', line)
+            temp_q = temp_q.replace(":hell_arrow:", "")
+            
+            # Limpieza estética final
+            question = temp_q.replace("**", "").replace("__", "").strip()
+            break
     
-    # 2. BUSCAR RESPUESTA
+    # FALLBACK: Si no encontramos la flecha (encuestas viejas o mal formato)
+    if not question:
+        for line in lines:
+            clean = line.strip()
+            # Si la línea tiene 3 o más guiones seguidos, ES SEPARADOR -> IGNORAR
+            if "---" in clean or "___" in clean:
+                continue
+            # Si es vacía o muy corta
+            if len(clean) < 3:
+                continue
+            
+            # Si pasa los filtros, asumimos que es la pregunta
+            question = clean.replace("**", "").replace("__", "").replace(">", "").strip()
+            break
+            
+    # Si aún así no hay pregunta, ponemos algo genérico
+    if not question:
+        question = "Encuesta sin título"
+
+    # ---------------------------------------------------------
+    # PASO 2: ENCONTRAR LA RESPUESTA
+    # ---------------------------------------------------------
     emoji_str = str(winner_emoji)
     
     for line in lines:
         if emoji_str in line:
-            # Quitamos el emoji, los > y las negritas para dejar solo el texto
-            clean_option = line.replace(emoji_str, "").replace(">", "").replace("*", "").replace("_", "").strip()
-            # Limpieza final de guiones o dos puntos al inicio
-            clean_option = clean_option.lstrip(" :-").strip()
+            clean_option = line.replace(emoji_str, "").strip()
+            # Limpiamos basura del inicio (guiones, dos puntos, flechas)
+            clean_option = clean_option.lstrip(" :->").strip()
+            # Limpiamos basura del final (votos viejos tipo (3))
+            clean_option = re.sub(r'\([0-9]+\)$', '', clean_option).strip()
             
             if clean_option:
                 winning_text = clean_option
                 found_option = True
                 break
     
-    # Si no encontramos texto al lado del emoji, usamos el emoji mismo
     if not found_option:
         winning_text = str(winner_emoji)
 
-    # Cortar si es muy largo
+    # Cortar textos muy largos
     if len(question) > 60: question = question[:57] + "..."
     if len(winning_text) > 50: winning_text = winning_text[:47] + "..."
 
@@ -142,9 +166,9 @@ async def finish_polls(interaction: discord.Interaction):
     async for message in polls_channel.history(limit=50):
         if not message.content or not message.reactions: continue 
         
-        # Comprobación extra: Si al quitar guiones no queda nada, ignoramos el mensaje entero
-        check_msg = message.content.replace("-", "").replace("_", "").strip()
-        if not check_msg: continue
+        # Filtro inicial rápido: Si es puro separador, fuera.
+        if "----" in message.content and len(message.content) < 30:
+             continue
 
         msg_date = message.created_at.date()
         if reference_date is None: reference_date = msg_date
@@ -154,11 +178,9 @@ async def finish_polls(interaction: discord.Interaction):
         
         if winner_reaction.count > 1:
             question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
-            if not question: continue
-
+            
             # --- FORMATO FINAL ---
             # Flecha Pregunta : Respuesta
-            # SIN NÚMEROS DE VOTOS
             results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
             count += 1
 
@@ -319,7 +341,6 @@ async def on_member_update(before, after):
     elif not name_has_tag and has_role:
         try:
             await after.remove_roles(role)
-            # Check anti-cheat
             giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
             if giveaway_channel:
                 async for message in giveaway_channel.history(limit=20):
