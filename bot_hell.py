@@ -5,6 +5,7 @@ import os
 import asyncio
 import random
 import threading
+from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -32,18 +33,14 @@ TOKEN = os.environ.get("DISCORD_TOKEN")
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
 
-# ⚠️ OJO: He puesto el mismo ID para Sorteos y Comandos porque es el que me has dado.
-# Si son canales distintos, cambia el número de GIVEAWAY_CHANNEL_ID por el correcto.
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
-CMD_CHANNEL_ID = 1449849645495746803       # <--- ¡ID APLICADO!
+POLLS_CHANNEL_ID = 1449083865862770819     
+CMD_CHANNEL_ID = 1449346777659609288       # <--- ¡ID CORREGIDO!
 
 # --- LISTA DE COMANDOS (Menú Fijo) ---
+# He puesto '⚫' (Unicode) porque funciona 100% seguro sin códigos extra.
 COMMAND_LIST_TEXT = """
-:Black_Dot: **!recipes** - Ver crafteos del server
-:Black_Dot: **!shop** - Tienda del juego
-:Black_Dot: **!kit** - Ver los kits
-:Black_Dot: **!points** - Ver tus puntos
-:Black_Dot: **!vote** - Link para votar
+⚫ **!recipes** - Ver crafteos del server
 """
 
 # ==========================================
@@ -69,7 +66,62 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# 🛡️ GESTOR DE MENSAJES (AUTO-DELETE INTELIGENTE)
+# 📊 COMANDO: /finish_polls (AUTO DETECCIÓN DE LOTE)
+# ==========================================
+@bot.tree.command(name="finish_polls", description="Publica resultados del último lote de votaciones.")
+async def finish_polls(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+        return
+
+    await interaction.response.defer()
+
+    polls_channel = bot.get_channel(POLLS_CHANNEL_ID)
+    if not polls_channel:
+        await interaction.followup.send("❌ Error: No encuentro el canal de votaciones.")
+        return
+
+    results_text = ""
+    count = 0
+    reference_date = None 
+    
+    async for message in polls_channel.history(limit=None):
+        if not message.content or not message.reactions:
+            continue 
+
+        msg_date = message.created_at.date()
+
+        if reference_date is None:
+            reference_date = msg_date
+        elif msg_date != reference_date:
+            break 
+
+        winner_reaction = max(message.reactions, key=lambda r: r.count)
+        
+        if winner_reaction.count > 1:
+            question = message.content[:100] + "..." if len(message.content) > 100 else message.content
+            # Usamos ⚫ aquí también para que no falle
+            results_text += f"\n⚫ **{question}**\n👉 **Winner:** {winner_reaction.emoji} ({winner_reaction.count} votes)\n━━━━━━━━━━━━━━━━━━━━\n"
+            count += 1
+
+    if count == 0:
+        await interaction.followup.send("⚠️ No encontré votaciones recientes.")
+        return
+
+    embed = discord.Embed(
+        title="👑 **POLL RESULTS / RESULTADOS** 👑",
+        description=f"Here are the final results for **{reference_date}**:\n{results_text}",
+        color=0xff0000
+    )
+    embed.set_footer(text="Community Voice • Hell Legion")
+    if bot.user.avatar:
+        embed.set_thumbnail(url=bot.user.avatar.url)
+
+    await interaction.followup.send(embed=embed)
+
+
+# ==========================================
+# 🛡️ GESTOR DE MENSAJES (AUTO-DELETE + MENÚ)
 # ==========================================
 @bot.event
 async def on_message(message):
@@ -77,37 +129,31 @@ async def on_message(message):
     # --- LÓGICA DE LIMPIEZA EN CANAL DE COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
         
-        # 1. ¿Es un mensaje que NO debemos borrar?
         dont_delete = False
         
+        # Protegemos el mensaje del MENÚ (si es del bot y tiene el título correcto)
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
             title = str(embed.title).upper()
-            
-            # Proteger el Menú de Comandos
             if "AVAILABLE COMMANDS" in title:
                 dont_delete = True
-            
-            # Proteger los Sorteos (por si están en el mismo canal)
             if "GIVEAWAY" in title:
                 dont_delete = True
         
-        # 2. Si no está protegido -> BORRAR EN 2 MINUTOS
+        # Si NO es el menú, se borra en 2 minutos
         if not dont_delete:
             try:
                 await message.delete(delay=120) 
             except:
                 pass 
 
-    # --- PROCESAR COMANDOS ---
-    if message.author.bot:
-        return
+    if message.author.bot: return
     await bot.process_commands(message)
 
 # ==========================================
-# 🎁 COMANDO SLASH: /start_giveaway
+# 🎁 COMANDO: /start_giveaway
 # ==========================================
-@bot.tree.command(name="start_giveaway", description="Inicia un sorteo (Modo Hell automático según el canal)")
+@bot.tree.command(name="start_giveaway", description="Inicia un sorteo")
 @app_commands.describe(tiempo="Duración (ej: 10m, 24h)", premio="Qué se sortea")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator:
@@ -161,7 +207,7 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         await interaction.channel.send("❌ No participants.")
 
 # ==========================================
-# 🚀 EVENTOS DE INICIO (MENÚ AUTOMÁTICO)
+# 🚀 EVENTOS DE INICIO
 # ==========================================
 @bot.event
 async def on_ready():
@@ -169,33 +215,31 @@ async def on_ready():
     print("🔄 Sincronizando comandos Slash...")
     await bot.tree.sync()
     
-    # --- AUTOMATIZACIÓN DEL MENÚ DE COMANDOS ---
+    # --- MENÚ AUTOMÁTICO DE COMANDOS (ACTUALIZADO) ---
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
-        print("📜 Verificando canal de comandos...")
         try:
-            # Borrar menús viejos duplicados
+            # Borrar mensajes viejos del BOT para que no se duplique el menú
             async for msg in cmd_channel.history(limit=20):
                 if msg.author == bot.user and msg.embeds:
                     if "AVAILABLE COMMANDS" in (msg.embeds[0].title or ""):
                         await msg.delete()
             
-            # ENVIAR NUEVO MENÚ
+            # Enviar el NUEVO menú con solo !recipes
             embed = discord.Embed(
                 title="📜 **AVAILABLE COMMANDS / COMANDOS**",
                 description=f"Use the commands below. Messages autodestruct in **2 minutes**.\n\n{COMMAND_LIST_TEXT}",
                 color=0xffaa00 
             )
             embed.set_footer(text="⚠️ Auto-Cleaner Active: Chat stays clean.")
-            if bot.user.avatar:
-                embed.set_thumbnail(url=bot.user.avatar.url)
+            if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
             
             await cmd_channel.send(embed=embed)
-            print("✅ Menú de comandos actualizado.")
+            print(f"✅ Menú actualizado en el canal {CMD_CHANNEL_ID}")
         except Exception as e:
-            print(f"⚠️ Error en menú: {e}")
+            print(f"⚠️ Error actualizando menú: {e}")
 
-    # --- ESCÁNER DE NOMBRES ---
+    # Escáner de nombres
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
@@ -210,14 +254,11 @@ async def on_ready():
 async def on_member_update(before, after):
     name_check = after.global_name if after.global_name else after.name
     if not name_check: return
-
     guild = after.guild
     role = guild.get_role(SUPPORT_ROLE_ID)
     if not role: return
-
     name_has_tag = SUPPORT_TEXT.lower() in name_check.lower()
     has_role = role in after.roles
-
     if name_has_tag == has_role: return 
 
     if name_has_tag and not has_role:
@@ -226,7 +267,6 @@ async def on_member_update(before, after):
     elif not name_has_tag and has_role:
         try:
             await after.remove_roles(role)
-            # Anti-Cheat selectivo
             giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
             if giveaway_channel:
                 async for message in giveaway_channel.history(limit=20):
