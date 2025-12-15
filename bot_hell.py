@@ -27,9 +27,24 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 # 🔐 CONFIGURACIÓN
 # ==========================================
 TOKEN = os.environ.get("DISCORD_TOKEN")
+
+# --- IDs ---
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
-GIVEAWAY_CHANNEL_ID = 1449849645495746803  # CANAL HELL
+
+# ⚠️ OJO: He puesto el mismo ID para Sorteos y Comandos porque es el que me has dado.
+# Si son canales distintos, cambia el número de GIVEAWAY_CHANNEL_ID por el correcto.
+GIVEAWAY_CHANNEL_ID = 1449849645495746803 
+CMD_CHANNEL_ID = 1449849645495746803       # <--- ¡ID APLICADO!
+
+# --- LISTA DE COMANDOS (Menú Fijo) ---
+COMMAND_LIST_TEXT = """
+:Black_Dot: **!recipes** - Ver crafteos del server
+:Black_Dot: **!shop** - Tienda del juego
+:Black_Dot: **!kit** - Ver los kits
+:Black_Dot: **!points** - Ver tus puntos
+:Black_Dot: **!vote** - Link para votar
+"""
 
 # ==========================================
 # ⚙️ SETUP DEL BOT
@@ -54,32 +69,62 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
+# 🛡️ GESTOR DE MENSAJES (AUTO-DELETE INTELIGENTE)
+# ==========================================
+@bot.event
+async def on_message(message):
+    
+    # --- LÓGICA DE LIMPIEZA EN CANAL DE COMANDOS ---
+    if message.channel.id == CMD_CHANNEL_ID:
+        
+        # 1. ¿Es un mensaje que NO debemos borrar?
+        dont_delete = False
+        
+        if message.author == bot.user and message.embeds:
+            embed = message.embeds[0]
+            title = str(embed.title).upper()
+            
+            # Proteger el Menú de Comandos
+            if "AVAILABLE COMMANDS" in title:
+                dont_delete = True
+            
+            # Proteger los Sorteos (por si están en el mismo canal)
+            if "GIVEAWAY" in title:
+                dont_delete = True
+        
+        # 2. Si no está protegido -> BORRAR EN 2 MINUTOS
+        if not dont_delete:
+            try:
+                await message.delete(delay=120) 
+            except:
+                pass 
+
+    # --- PROCESAR COMANDOS ---
+    if message.author.bot:
+        return
+    await bot.process_commands(message)
+
+# ==========================================
 # 🎁 COMANDO SLASH: /start_giveaway
 # ==========================================
 @bot.tree.command(name="start_giveaway", description="Inicia un sorteo (Modo Hell automático según el canal)")
 @app_commands.describe(tiempo="Duración (ej: 10m, 24h)", premio="Qué se sortea")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
-    
-    # 1. Permisos de Admin
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
 
     seconds = convert_time(tiempo)
     if seconds <= 0:
-        await interaction.response.send_message("❌ Tiempo inválido. Usa formato: 10s, 30m, 24h", ephemeral=True)
+        await interaction.response.send_message("❌ Tiempo inválido.", ephemeral=True)
         return
 
-    # 2. Detectar si es el Canal HELL
     es_canal_hell = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
-
     if es_canal_hell:
-        # --- MODO HELL (ROJO + ANTI-CHEAT) ---
         color = 0xff0000
         titulo = "🔥 **HELL SPONSOR GIVEAWAY** 🔥"
         footer = "⚠️ ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick"
     else:
-        # --- MODO NORMAL (VERDE + CHILL) ---
         color = 0x00ff00
         titulo = "🎉 **GIVEAWAY** 🎉"
         footer = "Good luck to everyone!"
@@ -97,9 +142,7 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
 
     await asyncio.sleep(seconds)
 
-    # --- FINAL DEL SORTEO ---
-    try:
-        msg = await interaction.channel.fetch_message(msg.id)
+    try: msg = await interaction.channel.fetch_message(msg.id)
     except: return
 
     users = []
@@ -111,7 +154,6 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     if users:
         winner = random.choice(users)
         await interaction.channel.send(f"👑 **WINNER:** {winner.mention} won **{premio}**!")
-        
         embed.description += f"\n\n🏆 **Winner:** {winner.mention}"
         embed.color = 0xffd700
         await msg.edit(embed=embed)
@@ -119,20 +161,41 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         await interaction.channel.send("❌ No participants.")
 
 # ==========================================
-# 🚀 EVENTOS + ANTI-CHEAT
+# 🚀 EVENTOS DE INICIO (MENÚ AUTOMÁTICO)
 # ==========================================
-
 @bot.event
 async def on_ready():
     print(f"🔥 SISTEMA HELL ONLINE - {bot.user}")
     print("🔄 Sincronizando comandos Slash...")
-    try:
-        synced = await bot.tree.sync()
-        print(f"✅ Se han sincronizado {len(synced)} comandos Slash.")
-    except Exception as e:
-        print(f"❌ Error sincronizando: {e}")
+    await bot.tree.sync()
     
-    # Escáner inicial
+    # --- AUTOMATIZACIÓN DEL MENÚ DE COMANDOS ---
+    cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
+    if cmd_channel:
+        print("📜 Verificando canal de comandos...")
+        try:
+            # Borrar menús viejos duplicados
+            async for msg in cmd_channel.history(limit=20):
+                if msg.author == bot.user and msg.embeds:
+                    if "AVAILABLE COMMANDS" in (msg.embeds[0].title or ""):
+                        await msg.delete()
+            
+            # ENVIAR NUEVO MENÚ
+            embed = discord.Embed(
+                title="📜 **AVAILABLE COMMANDS / COMANDOS**",
+                description=f"Use the commands below. Messages autodestruct in **2 minutes**.\n\n{COMMAND_LIST_TEXT}",
+                color=0xffaa00 
+            )
+            embed.set_footer(text="⚠️ Auto-Cleaner Active: Chat stays clean.")
+            if bot.user.avatar:
+                embed.set_thumbnail(url=bot.user.avatar.url)
+            
+            await cmd_channel.send(embed=embed)
+            print("✅ Menú de comandos actualizado.")
+        except Exception as e:
+            print(f"⚠️ Error en menú: {e}")
+
+    # --- ESCÁNER DE NOMBRES ---
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
@@ -157,18 +220,13 @@ async def on_member_update(before, after):
 
     if name_has_tag == has_role: return 
 
-    # --- DAR ROL ---
     if name_has_tag and not has_role:
         try: await after.add_roles(role)
         except: pass
-
-    # --- QUITAR ROL Y REVISAR SORTEOS (ANTI-CHEAT) ---
     elif not name_has_tag and has_role:
         try:
             await after.remove_roles(role)
-            print(f"[-] ROL QUITADO: {name_check}")
-            
-            # Anti-Cheat selectivo (Solo Canal Hell)
+            # Anti-Cheat selectivo
             giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
             if giveaway_channel:
                 async for message in giveaway_channel.history(limit=20):
@@ -177,9 +235,7 @@ async def on_member_update(before, after):
                         if "ANTI-CHEAT" in (embed.footer.text or ""):
                             for reaction in message.reactions:
                                 if str(reaction.emoji) == "🎉":
-                                    try:
-                                        await message.remove_reaction("🎉", after)
-                                        print(f"   [x] KICKED FROM GIVEAWAY: {name_check}")
+                                    try: await message.remove_reaction("🎉", after)
                                     except: pass
         except: pass
 
