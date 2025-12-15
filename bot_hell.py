@@ -8,7 +8,7 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (Para que Render no se apague)
+# 🚑 FAKE WEB SERVER (Para Render)
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -32,7 +32,7 @@ SUPPORT_ROLE_ID = 1336477737594130482
 GIVEAWAY_CHANNEL_ID = 1449849645495746803  # CANAL HELL
 
 # ==========================================
-# ⚙️ SETUP DEL BOT (MODO SLASH)
+# ⚙️ SETUP DEL BOT
 # ==========================================
 intents = discord.Intents.default()
 intents.members = True
@@ -40,10 +40,8 @@ intents.message_content = True
 intents.reactions = True
 intents.presences = True
 
-# Usamos commands.Bot para facilitar la sincronización
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Conversor de tiempo (10s, 1m, 1h, 1d)
 def convert_time(time_str):
     unit = time_str[-1].lower()
     if unit not in ['s', 'm', 'h', 'd']: return -1
@@ -56,12 +54,13 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# 🎁 COMANDO SLASH: /start
+# 🎁 COMANDO SLASH: /start_giveaway
 # ==========================================
-@bot.tree.command(name="start", description="Inicia un sorteo (Modo Hell automático según el canal)")
+@bot.tree.command(name="start_giveaway", description="Inicia un sorteo (Modo Hell automático según el canal)")
 @app_commands.describe(tiempo="Duración (ej: 10m, 24h)", premio="Qué se sortea")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
-    # Solo administradores pueden usarlo
+    
+    # 1. Permisos de Admin
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
@@ -71,7 +70,7 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         await interaction.response.send_message("❌ Tiempo inválido. Usa formato: 10s, 30m, 24h", ephemeral=True)
         return
 
-    # DETECCIÓN AUTOMÁTICA DE CANAL
+    # 2. Detectar si es el Canal HELL
     es_canal_hell = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
 
     if es_canal_hell:
@@ -92,15 +91,13 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     )
     embed.set_footer(text=footer)
 
-    # Enviamos el sorteo
     await interaction.response.send_message(embed=embed)
-    msg = await interaction.original_response() # Obtenemos el mensaje real
+    msg = await interaction.original_response()
     await msg.add_reaction("🎉")
 
-    # Esperamos el tiempo
     await asyncio.sleep(seconds)
 
-    # --- FINALIZAR SORTEO ---
+    # --- FINAL DEL SORTEO ---
     try:
         msg = await interaction.channel.fetch_message(msg.id)
     except: return
@@ -116,7 +113,7 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         await interaction.channel.send(f"👑 **WINNER:** {winner.mention} won **{premio}**!")
         
         embed.description += f"\n\n🏆 **Winner:** {winner.mention}"
-        embed.color = 0xffd700 # Dorado al acabar
+        embed.color = 0xffd700
         await msg.edit(embed=embed)
     else:
         await interaction.channel.send("❌ No participants.")
@@ -135,8 +132,7 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Error sincronizando: {e}")
     
-    # --- ESCÁNER DE INICIO ---
-    # Revisa a la gente que ya tiene el nombre al encenderse
+    # Escáner inicial
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
@@ -159,7 +155,7 @@ async def on_member_update(before, after):
     name_has_tag = SUPPORT_TEXT.lower() in name_check.lower()
     has_role = role in after.roles
 
-    if name_has_tag == has_role: return # Sin cambios
+    if name_has_tag == has_role: return 
 
     # --- DAR ROL ---
     if name_has_tag and not has_role:
@@ -172,15 +168,12 @@ async def on_member_update(before, after):
             await after.remove_roles(role)
             print(f"[-] ROL QUITADO: {name_check}")
             
-            # Solo revisamos el CANAL HELL para borrar reacciones
-            # Los sorteos normales en otros canales NO se tocan
+            # Anti-Cheat selectivo (Solo Canal Hell)
             giveaway_channel = guild.get_channel(GIVEAWAY_CHANNEL_ID)
             if giveaway_channel:
                 async for message in giveaway_channel.history(limit=20):
-                    # Verificamos que sea un mensaje del bot y tenga el Embed Rojo/Anti-Cheat
                     if message.author == bot.user and message.embeds:
                         embed = message.embeds[0]
-                        # Doble verificación: Está en el canal correcto Y tiene el footer de aviso
                         if "ANTI-CHEAT" in (embed.footer.text or ""):
                             for reaction in message.reactions:
                                 if str(reaction.emoji) == "🎉":
