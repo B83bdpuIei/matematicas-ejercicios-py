@@ -33,7 +33,8 @@ TOKEN = os.environ.get("DISCORD_TOKEN")
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
-ROLES_CHANNEL_ID = 1449083960578670614  # <--- NUEVO ID PARA LOS BOTONES
+ROLES_CHANNEL_ID = 1449083960578670614
+SUGGEST_CHANNEL_ID = 1449346646465839134 # <--- NUEVO CANAL DE SUGERENCIAS
 
 # --- IDs DE ROLES (AUTO-ROLES) ---
 ROLES_CONFIG = {
@@ -51,12 +52,19 @@ ROLES_CONFIG = {
 
 # --- ESTÉTICA ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
+NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
+CHECK_ICON = "<a:NoweyCheck:1391390187615031407>" # Tu Check
+CROSS_ICON = "<a:knights_no:1124380928647626782>" # Tu X
+
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
 
 COMMAND_LIST_TEXT = f"""
 {HELL_ARROW} **!recipes** - Ver crafteos del server
 """
+
+# VARIABLE GLOBAL PARA CONTAR SUGERENCIAS
+suggestion_count = 0
 
 # ==========================================
 # ⚙️ SETUP DEL BOT
@@ -254,8 +262,58 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     else:
         await interaction.channel.send("❌ No participants.")
 
+# ==========================================
+# 🛡️ GESTOR DE MENSAJES (SISTEMA DE SUGERENCIAS NUEVO)
+# ==========================================
 @bot.event
 async def on_message(message):
+    if message.author.bot: return
+
+    # --- LÓGICA DE SUGERENCIAS ---
+    if message.channel.id == SUGGEST_CHANNEL_ID:
+        # Si NO empieza por .suggest -> BORRAR
+        if not message.content.startswith(".suggest"):
+            try: await message.delete()
+            except: pass
+            return
+        
+        # Si SÍ es una sugerencia -> CREAR EMBED
+        # 1. Borramos el mensaje original del usuario
+        try: await message.delete()
+        except: pass
+        
+        # 2. Extraemos el texto (quitando el .suggest)
+        suggestion_content = message.content[8:].strip()
+        if not suggestion_content: return # Si está vacío, no hacemos nada
+
+        # 3. Creamos el Embed Elegante
+        embed = discord.Embed(description=f"**{suggestion_content}**", color=0xffaa00)
+        embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+        embed.set_footer(text="Hell Legion System • Suggestions")
+        
+        # 4. Enviamos y ponemos reacciones
+        sent_msg = await message.channel.send(embed=embed)
+        try:
+            await sent_msg.add_reaction(CHECK_ICON)
+            await sent_msg.add_reaction(CROSS_ICON)
+        except Exception as e:
+            print(f"Error poniendo reacciones (¿Emoji ID mal?): {e}")
+
+        # 5. CONTADOR PARA RECORDATORIO (CADA 10)
+        global suggestion_count
+        suggestion_count += 1
+        
+        if suggestion_count % 10 == 0:
+            reminder = await message.channel.send(
+                f"💡 **Tip:** To suggest something, type: `.suggest <your text>`\n"
+                "Everything else will be auto-deleted."
+            )
+            # Opcional: Borrar el recordatorio a los 20 segundos para no ensuciar
+            # await reminder.delete(delay=20) 
+
+        return # Cortamos aquí para que no haga nada más
+
+    # --- LÓGICA DE LIMPIEZA EN COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
         dont_delete = False
         if message.author == bot.user and message.embeds:
@@ -265,7 +323,7 @@ async def on_message(message):
         if not dont_delete:
             try: await message.delete(delay=120) 
             except: pass 
-    if message.author.bot: return
+
     await bot.process_commands(message)
 
 # ==========================================
@@ -275,15 +333,11 @@ async def on_message(message):
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE - {bot.user}")
     
-    # IMPORTANTE: Cargamos los botones para que funcionen siempre
     bot.add_view(RolesView())
-    
     try: await bot.tree.sync()
     except: pass
     
-    # ----------------------------------------
-    # 1. AUTO-GENERADOR MENÚ DE COMANDOS
-    # ----------------------------------------
+    # 1. MENÚ DE COMANDOS
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
         try:
@@ -307,13 +361,10 @@ async def on_ready():
                 await cmd_channel.send(embed=embed)
         except: pass
 
-    # ----------------------------------------
-    # 2. AUTO-GENERADOR MENÚ DE ROLES (NUEVO)
-    # ----------------------------------------
+    # 2. MENÚ DE ROLES
     roles_channel = bot.get_channel(ROLES_CHANNEL_ID)
     if roles_channel:
         try:
-            # Comprobamos si el último mensaje ya es nuestro menú de roles
             last_role_msg = None
             async for msg in roles_channel.history(limit=1): last_role_msg = msg
             
@@ -321,16 +372,12 @@ async def on_ready():
             if last_role_msg and last_role_msg.author == bot.user and last_role_msg.embeds:
                 if "NOTIFICATIONS & ACCESS" in (last_role_msg.embeds[0].title or ""): roles_ok = True
             
-            # Si NO está el menú, borramos lo viejo y lo ponemos
             if not roles_ok:
-                print("🔄 Creando menú de roles...")
-                # Borra mensajes viejos del bot en ese canal para limpiar
                 async for msg in roles_channel.history(limit=10):
-                    if msg.author == bot.user:
-                        await msg.delete()
+                    if msg.author == bot.user: await msg.delete()
 
                 embed = discord.Embed(
-                    title="🩸 **NOTIFICATIONS & ACCESS**",
+                    title=f"{NOTIFICATION_ICON} **NOTIFICATIONS & ACCESS**",
                     description=(
                         f"{HELL_ARROW} Click the buttons below to toggle your roles.\n"
                         f"{HELL_ARROW} Select the channels you want to see.\n"
@@ -342,16 +389,10 @@ async def on_ready():
                 if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
 
                 await roles_channel.send(embed=embed, view=RolesView())
-                print("✅ Menú de roles creado.")
-            else:
-                print("✅ El menú de roles ya existe.")
-
         except Exception as e:
             print(f"⚠️ Error en roles: {e}")
 
-    # ----------------------------------------
-    # 3. ESCÁNER DE NOMBRES (SUPPORT)
-    # ----------------------------------------
+    # 3. ESCÁNER DE NOMBRES
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
