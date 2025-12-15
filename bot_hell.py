@@ -5,7 +5,7 @@ import os
 import asyncio
 import random
 import threading
-from datetime import datetime, timedelta
+import re # Necesario para buscar los emojis en el texto
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -37,7 +37,7 @@ GIVEAWAY_CHANNEL_ID = 1449849645495746803
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
 
-# --- LISTA DE COMANDOS (Menú Fijo) ---
+# --- LISTA DE COMANDOS ---
 COMMAND_LIST_TEXT = """
 ⚫ **!recipes** - Ver crafteos del server
 """
@@ -64,16 +64,43 @@ def convert_time(time_str):
     if unit == 'd': return val * 86400
     return 0
 
+# --- FUNCIÓN MÁGICA PARA ARREGLAR EMOJIS ---
+def fix_content_visuals(text, bot_instance):
+    """
+    1. Busca patrones :nombre: y los reemplaza por el emoji real si el bot lo tiene.
+    2. Limpia asteriscos y guiones bajos extra.
+    """
+    # Paso 1: Reemplazar nombres de emojis por sus IDs reales
+    # Busca palabras entre dos puntos, ej: :hell_arrow:
+    emoji_pattern = re.compile(r':([a-zA-Z0-9_]+):')
+    
+    def replace_emoji(match):
+        emoji_name = match.group(1)
+        # Busca el emoji en la caché del bot
+        emoji = discord.utils.get(bot_instance.emojis, name=emoji_name)
+        if emoji:
+            return str(emoji) # Devuelve <a:nombre:ID>
+        return match.group(0) # Si no existe, deja el texto original
+    
+    text = emoji_pattern.sub(replace_emoji, text)
+    
+    # Paso 2: Limpieza estética
+    # Quitar negritas excesivas o guiones bajos de Markdown
+    text = text.replace("**", "").replace("__", "").replace("⚫", "").strip()
+    
+    return text
+
 # ==========================================
-# 📊 COMANDO: /finish_polls (FORMATO COMPACTO)
+# 📊 COMANDO: /finish_polls
 # ==========================================
 @bot.tree.command(name="finish_polls", description="Publica resultados del último lote de votaciones.")
 async def finish_polls(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
-        return
-
+    # 1. DEFER INMEDIATO: Lo primero que hace el bot para evitar el Error 404
     await interaction.response.defer()
+
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.followup.send("❌ No tienes permisos.", ephemeral=True)
+        return
 
     polls_channel = bot.get_channel(POLLS_CHANNEL_ID)
     if not polls_channel:
@@ -84,69 +111,80 @@ async def finish_polls(interaction: discord.Interaction):
     count = 0
     reference_date = None 
     
-    async for message in polls_channel.history(limit=None):
+    # Recorremos el historial
+    async for message in polls_channel.history(limit=50): # Limitado a 50 para que sea rápido
         if not message.content or not message.reactions:
             continue 
+
+        # FILTRO DE BASURA: Si el mensaje es solo líneas separadoras, lo ignoramos
+        if "____" in message.content or "----" in message.content:
+            continue
 
         msg_date = message.created_at.date()
 
         if reference_date is None:
             reference_date = msg_date
         elif msg_date != reference_date:
-            break 
+            break # Paramos si cambiamos de día (lote anterior)
 
+        # Calculamos ganador
         winner_reaction = max(message.reactions, key=lambda r: r.count)
         
+        # Filtro: Solo mostrar si tiene más de 1 voto (evitar spam vacío)
         if winner_reaction.count > 1:
-            # Limpieza básica del texto para que no quede raro
-            question = message.content.strip()
-            # Quitamos asteriscos extra si el usuario los puso manual, para ponerlos nosotros bien
-            question_clean = question.replace("**", "")
+            # LIMPIEZA AUTOMÁTICA
+            question_clean = fix_content_visuals(message.content, bot)
             
-            # Cortamos si es muy largo
-            if len(question_clean) > 80:
-                question_clean = question_clean[:80] + "..."
+            # Si después de limpiar queda vacío o muy corto, lo saltamos
+            if len(question_clean) < 3:
+                continue
 
-            # --- FORMATO "Buff Carcha : No y ya" ---
-            # ⚫ **Pregunta**: Emoji (Votos)
-            results_text += f"⚫ **{question_clean}**: {winner_reaction.emoji} ({winner_reaction.count})\n"
+            # Cortamos si es gigante
+            if len(question_clean) > 60:
+                question_clean = question_clean[:60] + "..."
+
+            # Formato final solicitado: ⚫ Pregunta : Ganador (Votos)
+            # winner_reaction.emoji ya es el objeto emoji correcto si es una reacción
+            results_text += f"⚫ **{question_clean}** : {winner_reaction.emoji} ({winner_reaction.count})\n\n"
             count += 1
 
     if count == 0:
-        await interaction.followup.send("⚠️ No encontré votaciones recientes.")
+        await interaction.followup.send("⚠️ No encontré votaciones válidas recientes.")
         return
 
-    # --- Lógica de Paginación (Anti-Crash 4096) ---
+    # --- ENVIAR RESULTADOS (Con protección anti-crash) ---
     MAX_LENGTH = 4000 
 
+    # Si es corto, un solo mensaje
     if len(results_text) <= MAX_LENGTH:
         embed = discord.Embed(
-            title="👑 **POLL RESULTS / RESULTADOS**",
-            description=f"**(Fecha: {reference_date})**\n\n{results_text}",
+            title="👑 **POLL RESULTS**", # Título limpio
+            description=results_text,
             color=0xff0000
         )
-        embed.set_footer(text="Community Voice • Hell Legion")
+        embed.set_footer(text=f"Community Voice • {reference_date}")
         if bot.user.avatar:
             embed.set_thumbnail(url=bot.user.avatar.url)
         await interaction.followup.send(embed=embed)
 
+    # Si es largo, paginamos
     else:
         partes = [results_text[i:i+MAX_LENGTH] for i in range(0, len(results_text), MAX_LENGTH)]
         
         for i, parte in enumerate(partes):
             embed = discord.Embed(
-                title=f"👑 **POLL RESULTS** (Parte {i+1}/{len(partes)})",
-                description=f"**(Fecha: {reference_date})**\n\n{parte}",
+                title=f"👑 **POLL RESULTS** ({i+1}/{len(partes)})",
+                description=parte,
                 color=0xff0000
             )
-            embed.set_footer(text="Community Voice • Hell Legion")
+            embed.set_footer(text=f"Community Voice • {reference_date}")
             if bot.user.avatar:
                 embed.set_thumbnail(url=bot.user.avatar.url)
             
             await interaction.followup.send(embed=embed)
 
 # ==========================================
-# 🛡️ GESTOR DE MENSAJES (AUTO-DELETE + MENÚ)
+# 🛡️ GESTOR DE MENSAJES 
 # ==========================================
 @bot.event
 async def on_message(message):
@@ -228,7 +266,11 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
 async def on_ready():
     print(f"🔥 SISTEMA HELL ONLINE - {bot.user}")
     print("🔄 Sincronizando comandos Slash...")
-    await bot.tree.sync()
+    try:
+        await bot.tree.sync()
+        print("✅ Comandos Sincronizados")
+    except Exception as e:
+        print(f"❌ Error sync: {e}")
     
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
@@ -247,10 +289,10 @@ async def on_ready():
             if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
             
             await cmd_channel.send(embed=embed)
-            print(f"✅ Menú actualizado en el canal {CMD_CHANNEL_ID}")
         except Exception as e:
             print(f"⚠️ Error actualizando menú: {e}")
 
+    # Escáner de roles inicial
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
