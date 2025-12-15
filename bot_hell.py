@@ -34,7 +34,7 @@ GIVEAWAY_CHANNEL_ID = 1449849645495746803
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
-SUGGEST_CHANNEL_ID = 1449346646465839134 # <--- NUEVO CANAL DE SUGERENCIAS
+SUGGEST_CHANNEL_ID = 1449346646465839134 
 
 # --- IDs DE ROLES (AUTO-ROLES) ---
 ROLES_CONFIG = {
@@ -50,11 +50,13 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- ESTÉTICA ---
+# --- ESTÉTICA & EMOJIS ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
-CHECK_ICON = "<a:NoweyCheck:1391390187615031407>" # Tu Check
-CROSS_ICON = "<a:knights_no:1124380928647626782>" # Tu X
+
+# TUS NUEVOS EMOJIS DE SUGERENCIAS
+CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
+CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
@@ -129,7 +131,6 @@ def parse_poll_result(content, winner_emoji):
     winning_text = "Opción Seleccionada"
     found_option = False
 
-    # BUSCAR PREGUNTA
     for line in lines:
         if "1211049707128750080" in line or "hell_arrow" in line:
             temp_q = re.sub(r'<a?:hell_arrow:[0-9]+>', '', line)
@@ -147,7 +148,6 @@ def parse_poll_result(content, winner_emoji):
             
     if not question: question = "Encuesta"
 
-    # BUSCAR RESPUESTA
     emoji_str = str(winner_emoji)
     for line in lines:
         if emoji_str in line:
@@ -263,7 +263,7 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         await interaction.channel.send("❌ No participants.")
 
 # ==========================================
-# 🛡️ GESTOR DE MENSAJES (SISTEMA DE SUGERENCIAS NUEVO)
+# 🛡️ GESTOR DE MENSAJES (SUGERENCIAS MEJORADO)
 # ==========================================
 @bot.event
 async def on_message(message):
@@ -271,49 +271,54 @@ async def on_message(message):
 
     # --- LÓGICA DE SUGERENCIAS ---
     if message.channel.id == SUGGEST_CHANNEL_ID:
-        # Si NO empieza por .suggest -> BORRAR
+        
+        # BORRAR SI NO ES COMANDO
         if not message.content.startswith(".suggest"):
             try: await message.delete()
             except: pass
             return
         
-        # Si SÍ es una sugerencia -> CREAR EMBED
-        # 1. Borramos el mensaje original del usuario
+        # PROCESAR SUGERENCIA
         try: await message.delete()
         except: pass
         
-        # 2. Extraemos el texto (quitando el .suggest)
         suggestion_content = message.content[8:].strip()
-        if not suggestion_content: return # Si está vacío, no hacemos nada
+        if not suggestion_content: return 
 
-        # 3. Creamos el Embed Elegante
+        # Crear Embed Bonito
         embed = discord.Embed(description=f"**{suggestion_content}**", color=0xffaa00)
         embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
         embed.set_footer(text="Hell Legion System • Suggestions")
         
-        # 4. Enviamos y ponemos reacciones
         sent_msg = await message.channel.send(embed=embed)
         try:
             await sent_msg.add_reaction(CHECK_ICON)
             await sent_msg.add_reaction(CROSS_ICON)
         except Exception as e:
-            print(f"Error poniendo reacciones (¿Emoji ID mal?): {e}")
+            print(f"Error reacciones: {e}")
 
-        # 5. CONTADOR PARA RECORDATORIO (CADA 10)
+        # RECORDATORIO BONITO (Cada 10)
         global suggestion_count
         suggestion_count += 1
         
         if suggestion_count % 10 == 0:
-            reminder = await message.channel.send(
-                f"💡 **Tip:** To suggest something, type: `.suggest <your text>`\n"
-                "Everything else will be auto-deleted."
+            # Creamos un embed para el tip también
+            tip_embed = discord.Embed(
+                description=(
+                    f"💡 **HOW TO SUGGEST**\n"
+                    f"{HELL_ARROW} Use: `.suggest <your text>`\n"
+                    f"{HELL_ARROW} Example: `.suggest Add more turrets`\n\n"
+                    "*Everything else is auto-deleted.*"
+                ),
+                color=0x2b2d31 # Color oscuro "discreto"
             )
-            # Opcional: Borrar el recordatorio a los 20 segundos para no ensuciar
-            # await reminder.delete(delay=20) 
+            if bot.user.avatar: tip_embed.set_thumbnail(url=bot.user.avatar.url)
+            
+            await message.channel.send(embed=tip_embed)
 
-        return # Cortamos aquí para que no haga nada más
+        return 
 
-    # --- LÓGICA DE LIMPIEZA EN COMANDOS ---
+    # --- LIMPIEZA COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
         dont_delete = False
         if message.author == bot.user and message.embeds:
@@ -367,7 +372,6 @@ async def on_ready():
         try:
             last_role_msg = None
             async for msg in roles_channel.history(limit=1): last_role_msg = msg
-            
             roles_ok = False
             if last_role_msg and last_role_msg.author == bot.user and last_role_msg.embeds:
                 if "NOTIFICATIONS & ACCESS" in (last_role_msg.embeds[0].title or ""): roles_ok = True
@@ -387,12 +391,54 @@ async def on_ready():
                 )
                 embed.set_footer(text="Hell Legion System • Auto-Roles")
                 if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
-
                 await roles_channel.send(embed=embed, view=RolesView())
         except Exception as e:
             print(f"⚠️ Error en roles: {e}")
 
-    # 3. ESCÁNER DE NOMBRES
+    # 3. MENÚ DE SUGERENCIAS (NUEVO HEADER FIJO)
+    suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
+    if suggest_channel:
+        try:
+            # Verificamos si ya está el mensaje de guía
+            last_sug_msg = None
+            async for msg in suggest_channel.history(limit=1): last_sug_msg = msg
+            
+            guide_ok = False
+            # Si el ultimo mensaje es del bot y tiene el titulo correcto, asumimos que está bien
+            if last_sug_msg and last_sug_msg.author == bot.user and last_sug_msg.embeds:
+                if "SUGGESTION SYSTEM" in (last_sug_msg.embeds[0].title or ""): guide_ok = True
+            
+            # Si no es el último mensaje (porque alguien sugirió algo) o no existe, lo enviamos
+            # NOTA: En este canal NO borramos mensajes viejos para no borrar sugerencias de usuarios
+            
+            if not guide_ok:
+                # Solo borramos mensajes PROPIOS del bot que sean viejos (limpieza de spam del bot)
+                async for msg in suggest_channel.history(limit=10):
+                    if msg.author == bot.user:
+                         # Borramos si es un recordatorio viejo o un menú viejo
+                         await msg.delete()
+
+                # Enviamos el Header Nuevo
+                embed = discord.Embed(
+                    title="💡 **SUGGESTION SYSTEM**",
+                    description=(
+                        f"To suggest something, use the command below:\n\n"
+                        f"` .suggest <your text> `\n\n"
+                        f"{HELL_ARROW} **Example:** `.suggest Add more kits`\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━"
+                    ),
+                    color=0x990000
+                )
+                embed.set_footer(text="Hell Legion System • Suggestions")
+                if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
+                
+                await suggest_channel.send(embed=embed)
+                print("✅ Menú de sugerencias creado.")
+                
+        except Exception as e:
+            print(f"⚠️ Error en sugerencias: {e}")
+
+    # 4. ESCÁNER DE NOMBRES
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
