@@ -9,7 +9,7 @@ import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (Para Render)
+# 🚑 FAKE WEB SERVER
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -33,9 +33,9 @@ TOKEN = os.environ.get("DISCORD_TOKEN")
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
+ROLES_CHANNEL_ID = 1449083960578670614  # <--- NUEVO ID PARA LOS BOTONES
 
 # --- IDs DE ROLES (AUTO-ROLES) ---
-# Formato: "Nombre en el Botón": ID_DEL_ROL
 ROLES_CONFIG = {
     "Ping": 1199101577127014541,
     "Wipes": 1210709945339875328,
@@ -49,7 +49,7 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- CONFIGURACIÓN VISUAL ---
+# --- ESTÉTICA ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
@@ -74,7 +74,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
-        # Usamos un custom_id único para que sea persistente
         super().__init__(
             label=label, 
             style=discord.ButtonStyle.secondary, 
@@ -83,11 +82,9 @@ class RoleButton(discord.ui.Button):
         self.role_id = role_id
 
     async def callback(self, interaction: discord.Interaction):
-        # Esta función se ejecuta cuando alguien pulsa el botón
         role = interaction.guild.get_role(self.role_id)
-        
         if not role:
-            await interaction.response.send_message("❌ Error: Role not found/Configured wrong.", ephemeral=True)
+            await interaction.response.send_message("❌ Error: Role not found.", ephemeral=True)
             return
 
         if role in interaction.user.roles:
@@ -99,39 +96,12 @@ class RoleButton(discord.ui.Button):
 
 class RolesView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None) # timeout=None hace que los botones no caduquen nunca
-        
-        # Añadimos un botón por cada rol en la configuración
+        super().__init__(timeout=None)
         for label, role_id in ROLES_CONFIG.items():
             self.add_item(RoleButton(label, role_id))
 
 # ==========================================
-# 🛠️ COMANDO: /setup_roles (PARA CREAR EL MENÚ)
-# ==========================================
-@bot.tree.command(name="setup_roles", description="Crea el panel de botones para auto-roles.")
-async def setup_roles(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🩸 **NOTIFICATIONS & ACCESS**",
-        description=(
-            f"{HELL_ARROW} Click the buttons below to toggle your roles.\n"
-            f"{HELL_ARROW} Select the channels you want to see.\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━"
-        ),
-        color=0x990000 
-    )
-    embed.set_footer(text="Hell Legion System • Auto-Roles")
-    if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
-
-    await interaction.channel.send(embed=embed, view=RolesView())
-    await interaction.response.send_message("✅ Panel de roles creado.", ephemeral=True)
-
-
-# ==========================================
-# 📊 FUNCIONES Y COMANDOS ANTERIORES
+# 📊 FUNCIONES AUXILIARES
 # ==========================================
 def convert_time(time_str):
     unit = time_str[-1].lower()
@@ -187,6 +157,9 @@ def parse_poll_result(content, winner_emoji):
 
     return question, winning_text
 
+# ==========================================
+# ⚡ COMANDOS SLASH
+# ==========================================
 @bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
     try: await interaction.response.defer()
@@ -296,19 +269,21 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ==========================================
-# 🚀 STARTUP & PERSISTENCIA
+# 🚀 STARTUP & LÓGICA AUTOMÁTICA
 # ==========================================
 @bot.event
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE - {bot.user}")
     
-    # 1. Cargamos la vista de botones para que funcione si se reinicia el bot
+    # IMPORTANTE: Cargamos los botones para que funcionen siempre
     bot.add_view(RolesView())
     
     try: await bot.tree.sync()
     except: pass
     
-    # --- MENU COMANDOS ---
+    # ----------------------------------------
+    # 1. AUTO-GENERADOR MENÚ DE COMANDOS
+    # ----------------------------------------
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
         try:
@@ -332,7 +307,51 @@ async def on_ready():
                 await cmd_channel.send(embed=embed)
         except: pass
 
-    # --- ESCÁNER DE ROLES (NOMBRE) ---
+    # ----------------------------------------
+    # 2. AUTO-GENERADOR MENÚ DE ROLES (NUEVO)
+    # ----------------------------------------
+    roles_channel = bot.get_channel(ROLES_CHANNEL_ID)
+    if roles_channel:
+        try:
+            # Comprobamos si el último mensaje ya es nuestro menú de roles
+            last_role_msg = None
+            async for msg in roles_channel.history(limit=1): last_role_msg = msg
+            
+            roles_ok = False
+            if last_role_msg and last_role_msg.author == bot.user and last_role_msg.embeds:
+                if "NOTIFICATIONS & ACCESS" in (last_role_msg.embeds[0].title or ""): roles_ok = True
+            
+            # Si NO está el menú, borramos lo viejo y lo ponemos
+            if not roles_ok:
+                print("🔄 Creando menú de roles...")
+                # Borra mensajes viejos del bot en ese canal para limpiar
+                async for msg in roles_channel.history(limit=10):
+                    if msg.author == bot.user:
+                        await msg.delete()
+
+                embed = discord.Embed(
+                    title="🩸 **NOTIFICATIONS & ACCESS**",
+                    description=(
+                        f"{HELL_ARROW} Click the buttons below to toggle your roles.\n"
+                        f"{HELL_ARROW} Select the channels you want to see.\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━"
+                    ),
+                    color=0x990000 
+                )
+                embed.set_footer(text="Hell Legion System • Auto-Roles")
+                if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
+
+                await roles_channel.send(embed=embed, view=RolesView())
+                print("✅ Menú de roles creado.")
+            else:
+                print("✅ El menú de roles ya existe.")
+
+        except Exception as e:
+            print(f"⚠️ Error en roles: {e}")
+
+    # ----------------------------------------
+    # 3. ESCÁNER DE NOMBRES (SUPPORT)
+    # ----------------------------------------
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
