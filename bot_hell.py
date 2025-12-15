@@ -9,7 +9,7 @@ import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER
+# 🚑 FAKE WEB SERVER (Para Render)
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -29,16 +29,30 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 # ==========================================
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
-# --- IDs ---
-SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
-SUPPORT_ROLE_ID = 1336477737594130482
-
+# --- IDs DE CANALES ---
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
 
-# --- TU FLECHA (La que usaremos para decorar el resultado) ---
+# --- IDs DE ROLES (AUTO-ROLES) ---
+# Formato: "Nombre en el Botón": ID_DEL_ROL
+ROLES_CONFIG = {
+    "Ping": 1199101577127014541,
+    "Wipes": 1210709945339875328,
+    "News": 1210710127871787050,
+    "Rollbacks": 1210710910499299349,
+    "Events": 1326887310331220028,
+    "Giveaways": 1326887498856661053,
+    "Announcements": 1326887647406329918,
+    "Polls": 1326887768923701300,
+    "Ban / Warns": 1326887925547274250,
+    "Patchs": 1326888505216864361
+}
+
+# --- CONFIGURACIÓN VISUAL ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
+SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
+SUPPORT_ROLE_ID = 1336477737594130482
 
 COMMAND_LIST_TEXT = f"""
 {HELL_ARROW} **!recipes** - Ver crafteos del server
@@ -55,6 +69,70 @@ intents.presences = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# ==========================================
+# 🔘 CLASE DE BOTONES (AUTO-ROLES)
+# ==========================================
+class RoleButton(discord.ui.Button):
+    def __init__(self, label, role_id):
+        # Usamos un custom_id único para que sea persistente
+        super().__init__(
+            label=label, 
+            style=discord.ButtonStyle.secondary, 
+            custom_id=f"role_{role_id}"
+        )
+        self.role_id = role_id
+
+    async def callback(self, interaction: discord.Interaction):
+        # Esta función se ejecuta cuando alguien pulsa el botón
+        role = interaction.guild.get_role(self.role_id)
+        
+        if not role:
+            await interaction.response.send_message("❌ Error: Role not found/Configured wrong.", ephemeral=True)
+            return
+
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message(f"➖ Removed **{role.name}** role.", ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(f"➕ Added **{role.name}** role.", ephemeral=True)
+
+class RolesView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None) # timeout=None hace que los botones no caduquen nunca
+        
+        # Añadimos un botón por cada rol en la configuración
+        for label, role_id in ROLES_CONFIG.items():
+            self.add_item(RoleButton(label, role_id))
+
+# ==========================================
+# 🛠️ COMANDO: /setup_roles (PARA CREAR EL MENÚ)
+# ==========================================
+@bot.tree.command(name="setup_roles", description="Crea el panel de botones para auto-roles.")
+async def setup_roles(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🩸 **NOTIFICATIONS & ACCESS**",
+        description=(
+            f"{HELL_ARROW} Click the buttons below to toggle your roles.\n"
+            f"{HELL_ARROW} Select the channels you want to see.\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        color=0x990000 
+    )
+    embed.set_footer(text="Hell Legion System • Auto-Roles")
+    if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
+
+    await interaction.channel.send(embed=embed, view=RolesView())
+    await interaction.response.send_message("✅ Panel de roles creado.", ephemeral=True)
+
+
+# ==========================================
+# 📊 FUNCIONES Y COMANDOS ANTERIORES
+# ==========================================
 def convert_time(time_str):
     unit = time_str[-1].lower()
     if unit not in ['s', 'm', 'h', 'd']: return -1
@@ -66,89 +144,53 @@ def convert_time(time_str):
     if unit == 'd': return val * 86400
     return 0
 
-# ==========================================
-# 🧠 LÓGICA INTELIGENTE (VERSIÓN SUPREMA)
-# ==========================================
 def parse_poll_result(content, winner_emoji):
     if not content: return None, None
-
     lines = content.split('\n')
     question = None
     winning_text = "Opción Seleccionada"
     found_option = False
 
-    # ---------------------------------------------------------
-    # PASO 1: ENCONTRAR LA PREGUNTA (Usando el ID del Emoji)
-    # ---------------------------------------------------------
+    # BUSCAR PREGUNTA
     for line in lines:
-        # Lógica: Si la línea tiene el ID de la flecha, ES LA PREGUNTA.
-        # Buscamos "1211049707128750080" o "hell_arrow"
         if "1211049707128750080" in line or "hell_arrow" in line:
-            # Limpiamos el emoji original para quedarnos solo con el texto
-            # Quitamos el formato <a:hell_arrow:123...> y :hell_arrow:
             temp_q = re.sub(r'<a?:hell_arrow:[0-9]+>', '', line)
             temp_q = temp_q.replace(":hell_arrow:", "")
-            
-            # Limpieza estética final
             question = temp_q.replace("**", "").replace("__", "").strip()
             break
     
-    # FALLBACK: Si no encontramos la flecha (encuestas viejas o mal formato)
     if not question:
         for line in lines:
             clean = line.strip()
-            # Si la línea tiene 3 o más guiones seguidos, ES SEPARADOR -> IGNORAR
-            if "---" in clean or "___" in clean:
-                continue
-            # Si es vacía o muy corta
-            if len(clean) < 3:
-                continue
-            
-            # Si pasa los filtros, asumimos que es la pregunta
+            if "---" in clean or "___" in clean: continue
+            if len(clean) < 3: continue
             question = clean.replace("**", "").replace("__", "").replace(">", "").strip()
             break
             
-    # Si aún así no hay pregunta, ponemos algo genérico
-    if not question:
-        question = "Encuesta sin título"
+    if not question: question = "Encuesta"
 
-    # ---------------------------------------------------------
-    # PASO 2: ENCONTRAR LA RESPUESTA
-    # ---------------------------------------------------------
+    # BUSCAR RESPUESTA
     emoji_str = str(winner_emoji)
-    
     for line in lines:
         if emoji_str in line:
             clean_option = line.replace(emoji_str, "").strip()
-            # Limpiamos basura del inicio (guiones, dos puntos, flechas)
             clean_option = clean_option.lstrip(" :->").strip()
-            # Limpiamos basura del final (votos viejos tipo (3))
             clean_option = re.sub(r'\([0-9]+\)$', '', clean_option).strip()
-            
             if clean_option:
                 winning_text = clean_option
                 found_option = True
                 break
     
-    if not found_option:
-        winning_text = str(winner_emoji)
-
-    # Cortar textos muy largos
+    if not found_option: winning_text = str(winner_emoji)
     if len(question) > 60: question = question[:57] + "..."
     if len(winning_text) > 50: winning_text = winning_text[:47] + "..."
 
     return question, winning_text
 
-# ==========================================
-# 📊 COMANDO: /finish_polls
-# ==========================================
 @bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
-    # Anti-Crash 404
-    try:
-        await interaction.response.defer()
-    except:
-        return 
+    try: await interaction.response.defer()
+    except: return 
 
     if not interaction.user.guild_permissions.administrator:
         await interaction.followup.send("❌ No tienes permisos.", ephemeral=True)
@@ -165,10 +207,7 @@ async def finish_polls(interaction: discord.Interaction):
     
     async for message in polls_channel.history(limit=50):
         if not message.content or not message.reactions: continue 
-        
-        # Filtro inicial rápido: Si es puro separador, fuera.
-        if "----" in message.content and len(message.content) < 30:
-             continue
+        if "----" in message.content and len(message.content) < 30: continue
 
         msg_date = message.created_at.date()
         if reference_date is None: reference_date = msg_date
@@ -178,17 +217,13 @@ async def finish_polls(interaction: discord.Interaction):
         
         if winner_reaction.count > 1:
             question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
-            
-            # --- FORMATO FINAL ---
-            # Flecha Pregunta : Respuesta
             results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
             count += 1
 
     if count == 0:
-        await interaction.followup.send("⚠️ No encontré resultados recientes.", ephemeral=True)
+        await interaction.followup.send("⚠️ No encontré resultados.", ephemeral=True)
         return
 
-    # --- ENVIAR ---
     MAX_LENGTH = 3500 
     header = f"📢 **POLL RESULTS**\n📅 {reference_date}\n\n"
     full_content = header + results_text
@@ -205,40 +240,16 @@ async def finish_polls(interaction: discord.Interaction):
             embed.set_footer(text=f"Page {i+1} • Hell Legion System")
             await interaction.followup.send(embed=embed)
 
-# ==========================================
-# 🛡️ GESTOR DE MENSAJES 
-# ==========================================
-@bot.event
-async def on_message(message):
-    if message.channel.id == CMD_CHANNEL_ID:
-        dont_delete = False
-        if message.author == bot.user and message.embeds:
-            title = str(message.embeds[0].title).upper()
-            if "AVAILABLE COMMANDS" in title or "GIVEAWAY" in title:
-                dont_delete = True
-        
-        if not dont_delete:
-            try: await message.delete(delay=120) 
-            except: pass 
-
-    if message.author.bot: return
-    await bot.process_commands(message)
-
-# ==========================================
-# 🎁 COMANDO: /start_giveaway
-# ==========================================
 @bot.tree.command(name="start_giveaway", description="Inicia un sorteo")
 @app_commands.describe(tiempo="Duración (ej: 10m, 24h)", premio="Qué se sortea")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
-
     seconds = convert_time(tiempo)
     if seconds <= 0:
         await interaction.response.send_message("❌ Tiempo inválido.", ephemeral=True)
         return
-
     es_canal_hell = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
     if es_canal_hell:
         color = 0xff0000
@@ -248,29 +259,19 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         color = 0x00ff00
         titulo = "🎉 **GIVEAWAY** 🎉"
         footer = "Good luck to everyone!"
-
-    embed = discord.Embed(
-        title=titulo,
-        description=f"Prize: **{premio}**\nTime: **{tiempo}**\n\nReact with 🎉 to enter!",
-        color=color
-    )
+    embed = discord.Embed(title=titulo, description=f"Prize: **{premio}**\nTime: **{tiempo}**\n\nReact with 🎉 to enter!", color=color)
     embed.set_footer(text=footer)
-
     await interaction.response.send_message(embed=embed)
     msg = await interaction.original_response()
     await msg.add_reaction("🎉")
-
     await asyncio.sleep(seconds)
-
     try: msg = await interaction.channel.fetch_message(msg.id)
     except: return
-
     users = []
     for reaction in msg.reactions:
         if str(reaction.emoji) == "🎉":
-            async for user in reaction.users():
+            async for user in reaction.users() :
                 if not user.bot: users.append(user)
-    
     if users:
         winner = random.choice(users)
         await interaction.channel.send(f"👑 **WINNER:** {winner.mention} won **{premio}**!")
@@ -280,21 +281,39 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     else:
         await interaction.channel.send("❌ No participants.")
 
+@bot.event
+async def on_message(message):
+    if message.channel.id == CMD_CHANNEL_ID:
+        dont_delete = False
+        if message.author == bot.user and message.embeds:
+            title = str(message.embeds[0].title).upper()
+            if "AVAILABLE COMMANDS" in title or "GIVEAWAY" in title:
+                dont_delete = True
+        if not dont_delete:
+            try: await message.delete(delay=120) 
+            except: pass 
+    if message.author.bot: return
+    await bot.process_commands(message)
+
 # ==========================================
-# 🚀 STARTUP
+# 🚀 STARTUP & PERSISTENCIA
 # ==========================================
 @bot.event
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE - {bot.user}")
+    
+    # 1. Cargamos la vista de botones para que funcione si se reinicia el bot
+    bot.add_view(RolesView())
+    
     try: await bot.tree.sync()
     except: pass
     
+    # --- MENU COMANDOS ---
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
         try:
             last_msg = None
             async for msg in cmd_channel.history(limit=1): last_msg = msg
-            
             menu_ok = False
             if last_msg and last_msg.author == bot.user and last_msg.embeds:
                 if "AVAILABLE COMMANDS" in (last_msg.embeds[0].title or ""): menu_ok = True
@@ -303,7 +322,6 @@ async def on_ready():
                 async for msg in cmd_channel.history(limit=10):
                     if msg.author == bot.user and msg.embeds:
                         if "AVAILABLE COMMANDS" in (msg.embeds[0].title or ""): await msg.delete()
-                
                 embed = discord.Embed(
                     title="📜 **AVAILABLE COMMANDS / COMANDOS**",
                     description=f"Use the commands below. Messages autodestruct in **2 minutes**.\n\n{COMMAND_LIST_TEXT}",
@@ -314,6 +332,7 @@ async def on_ready():
                 await cmd_channel.send(embed=embed)
         except: pass
 
+    # --- ESCÁNER DE ROLES (NOMBRE) ---
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
