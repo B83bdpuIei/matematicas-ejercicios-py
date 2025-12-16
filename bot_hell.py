@@ -41,7 +41,7 @@ CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
 SUGGEST_CHANNEL_ID = 1449346646465839134
 VAULT_CHANNEL_ID = 1450244608817762465
-DINO_CHANNEL_ID = 1450244689285353544 # <--- NUEVO CANAL DINO
+DINO_CHANNEL_ID = 1450244689285353544 
 
 # --- IDs DE ROLES ---
 ROLES_CONFIG = {
@@ -142,7 +142,7 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
         if guess == correct:
             # WINNER
             dino_game_state["active"] = False # Fin del juego actual
-            points_won = 0 # Placeholder solicitado
+            points_won = 0 
 
             await interaction.response.send_message(f"✅ **CORRECT!** You guessed it.", ephemeral=True)
 
@@ -229,7 +229,6 @@ async def dino_game_loop():
 # ==========================================
 # 🏦 SISTEMA VAULT
 # ==========================================
-# (Se mantiene igual que lo aprobaste)
 
 class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
@@ -294,11 +293,13 @@ async def manage_vault_hints(channel, message, code):
     except asyncio.CancelledError: pass
 
 # ==========================================
-# 🔘 ROLES
+# 🔘 ROLES (CÓDIGO CORREGIDO AQUÍ)
 # ==========================================
 class RoleButton(discord.ui.Button):
-    def __init__(self, label, role_id): super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
+    def __init__(self, label, role_id):
+        super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
         self.role_id = role_id
+
     async def callback(self, interaction: discord.Interaction):
         role = interaction.guild.get_role(self.role_id)
         if not role: return
@@ -308,10 +309,12 @@ class RoleButton(discord.ui.Button):
         else:
             await interaction.user.add_roles(role)
             await interaction.response.send_message(f"➕ Added **{role.name}**", ephemeral=True)
+
 class RolesView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        for label, role_id in ROLES_CONFIG.items(): self.add_item(RoleButton(label, role_id))
+        for label, role_id in ROLES_CONFIG.items():
+            self.add_item(RoleButton(label, role_id))
 
 # ==========================================
 # ⚡ COMANDOS
@@ -349,7 +352,7 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
 @bot.tree.command(name="start_giveaway", description="Inicia un sorteo")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator: return
-    seconds = convert_time(tiempo) # Asumimos funcion auxiliar convert_time existe
+    seconds = convert_time(tiempo) 
     if seconds <= 0: return
     embed = discord.Embed(title="🎉 GIVEAWAY", description=f"Prize: **{premio}**\nTime: **{tiempo}**", color=0xff0000)
     await interaction.response.send_message(embed=embed)
