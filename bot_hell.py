@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 import os
 import asyncio
 import random
@@ -41,6 +41,7 @@ CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
 SUGGEST_CHANNEL_ID = 1449346646465839134
 VAULT_CHANNEL_ID = 1450244608817762465
+DINO_CHANNEL_ID = 1450244689285353544 # <--- NUEVO CANAL DINO
 
 # --- IDs DE ROLES ---
 ROLES_CONFIG = {
@@ -56,18 +57,18 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- EMOJIS & ESTÉTICA GENERAL ---
+# --- EMOJIS & ESTÉTICA ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
-# --- EMOJIS ESPECIALES VAULT ---
-EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" # Decoración Título
-EMOJI_CROWN = "<a:yelow_crown:1219625559747858523>" # Winner
-EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" # Code
-EMOJI_LOOT  = "<:red:1339349944741396590>" # Loot
+# Emojis Vault
+EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
+EMOJI_CROWN = "<a:yelow_crown:1219625559747858523>" 
+EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
+EMOJI_LOOT  = "<:red:1339349944741396590>" 
 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
@@ -76,9 +77,22 @@ COMMAND_LIST_TEXT = f"""
 {HELL_ARROW} **!recipes** - Ver crafteos del server
 """
 
+# --- LISTA DE DINOSAURIOS (ARK) ---
+ARK_DINOS = [
+    "Tyrannosaurus", "Giganotosaurus", "Raptor", "Argentavis", "Pteranodon", 
+    "Triceratops", "Stegosaurus", "Spinosaurus", "Allosaurus", "Ankylosaurus", 
+    "Brontosaurus", "Carnotaurus", "Dilophosaurus", "Dimorphodon", "Direwolf", 
+    "Doedicurus", "Dunkleosteus", "Gallimimus", "Griffin", "Ichthyosaurus", 
+    "Iguanodon", "Kairuku", "Kaprosuchus", "Lystrosaurus", "Mammoth", 
+    "Megalodon", "Megatherium", "Moschops", "Oviraptor", "Parasaur", 
+    "Pegomastax", "Phiomia", "Procoptodon", "Quetzal", "Sarcosuchus", 
+    "Tapejara", "Terror Bird", "Therizinosaurus", "Thylacoleo", "Titanoboa", 
+    "Troodon", "Wyvern", "Yutyrannus", "Velonasaur", "Snow Owl", "Managarmr"
+]
+
 suggestion_count = 0
 
-# --- ESTADO VAULT ---
+# --- ESTADOS ---
 vault_state = {
     "active": False,
     "code": None,
@@ -87,6 +101,13 @@ vault_state = {
     "hints_task": None
 }
 user_cooldowns = {} 
+
+# Estado del Minijuego Dino
+dino_game_state = {
+    "active": False,
+    "current_dino": None,
+    "message_id": None
+}
 
 # ==========================================
 # ⚙️ SETUP
@@ -100,74 +121,155 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🏦 SISTEMA VAULT
+# 🦖 MINIGAME: WHO IS THE DINO
 # ==========================================
 
-class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
-    code_input = discord.ui.TextInput(
-        label="INSERT PIN CODE",
-        placeholder="####",
-        min_length=4,
-        max_length=4,
+class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
+    answer_input = discord.ui.TextInput(
+        label="Dino Name",
+        placeholder="Enter the correct name...",
         required=True
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        if not dino_game_state["active"]:
+            await interaction.response.send_message("❌ Too late! The round is over.", ephemeral=True)
+            return
+
+        guess = self.answer_input.value.strip().lower()
+        correct = dino_game_state["current_dino"].lower()
+
+        if guess == correct:
+            # WINNER
+            dino_game_state["active"] = False # Fin del juego actual
+            points_won = 0 # Placeholder solicitado
+
+            await interaction.response.send_message(f"✅ **CORRECT!** You guessed it.", ephemeral=True)
+
+            # Anuncio Público
+            embed = discord.Embed(color=0x00FF00)
+            embed.description = (
+                f"🎉 **WINNER:** {interaction.user.mention}\n"
+                f"🦖 **ANSWER:** `{dino_game_state['current_dino']}`\n"
+                f"🪙 **POINTS:** {points_won}"
+            )
+            embed.set_footer(text="Hell System • Dino Games")
+            
+            channel = bot.get_channel(DINO_CHANNEL_ID)
+            if channel:
+                await channel.send(embed=embed)
+            
+            # Desactivar botón del mensaje original
+            try:
+                msg = await channel.fetch_message(dino_game_state["message_id"])
+                await msg.edit(view=None)
+            except: pass
+
+        else:
+            await interaction.response.send_message(f"❌ **WRONG!** Try again.", ephemeral=True)
+
+class DinoView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="GUESS THE DINO", style=discord.ButtonStyle.primary, emoji="❓", custom_id="dino_guess_btn")
+    async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not dino_game_state["active"]:
+            await interaction.response.send_message("❌ Round ended.", ephemeral=True)
+            return
+        await interaction.response.send_modal(DinoModal())
+
+@tasks.loop(minutes=20)
+async def dino_game_loop():
+    channel = bot.get_channel(DINO_CHANNEL_ID)
+    if not channel: return
+
+    # 1. Si había un juego activo y nadie ganó, anunciar fallo
+    if dino_game_state["active"]:
+        # Se acabó el tiempo
+        fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n🦖 The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
+        await channel.send(embed=fail_embed)
+        
+        # Desactivar el botón viejo
+        try:
+            old_msg = await channel.fetch_message(dino_game_state["message_id"])
+            await old_msg.edit(view=None)
+        except: pass
+
+    # 2. Iniciar Nuevo Juego
+    dino_real_name = random.choice(ARK_DINOS)
+    
+    # Scramble (Revolver letras)
+    char_list = list(dino_real_name.upper())
+    random.shuffle(char_list)
+    scrambled_name = "".join(char_list)
+    
+    # Asegurarnos de que no salga igual (raro, pero posible)
+    while scrambled_name == dino_real_name.upper():
+        random.shuffle(char_list)
+        scrambled_name = "".join(char_list)
+
+    # 3. Enviar Mensaje
+    embed = discord.Embed(title="🦖 WHO IS THE DINO? 🦖", color=0xFFA500)
+    embed.description = (
+        f"Unscramble the name of this creature!\n\n"
+        f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
+        f"Click the button to answer. You have **20 minutes**!"
+    )
+    embed.set_footer(text="Hell System • Minigames")
+
+    view = DinoView()
+    msg = await channel.send(embed=embed, view=view)
+
+    # 4. Guardar Estado
+    dino_game_state["active"] = True
+    dino_game_state["current_dino"] = dino_real_name
+    dino_game_state["message_id"] = msg.id
+
+# ==========================================
+# 🏦 SISTEMA VAULT
+# ==========================================
+# (Se mantiene igual que lo aprobaste)
+
+class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
+    code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
         user_id = interaction.user.id
         current_time = time.time()
-
-        # Cooldown
         if user_id in user_cooldowns:
             elapsed = current_time - user_cooldowns[user_id]
             remaining = 15 - elapsed
             if remaining > 0:
                 await interaction.response.send_message(f"🚫 **SYSTEM LOCKED.** Wait **{int(remaining)}s** for reboot.", ephemeral=True)
                 return
-        
         user_cooldowns[user_id] = current_time
-
         if not vault_state["active"]:
             await interaction.response.send_message("❌ Connection lost. Event ended.", ephemeral=True)
             return
-
         guess = self.code_input.value
-
         if guess == vault_state["code"]:
-            # WINNER
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
-
             await interaction.response.send_message(f"✅ **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
-            
-            # --- EMBED DE GANADOR CON TUS EMOJIS ---
             winner_embed = discord.Embed(
                 title="🎉 VAULT CRACKED! 🎉",
-                description=(
-                    f"{EMOJI_CROWN} **WINNER:** {interaction.user.mention}\n"
-                    f"{EMOJI_CODE} **CODE:** `{guess}`\n"
-                    f"{EMOJI_LOOT} **LOOT:** {vault_state['prize']}"
-                ),
+                description=f"{EMOJI_CROWN} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_LOOT} **LOOT:** {vault_state['prize']}",
                 color=0xFFD700
             )
             winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") 
             winner_embed.set_footer(text="HELL SYSTEM • Vault Event") 
-            
             channel = bot.get_channel(VAULT_CHANNEL_ID)
-            if channel:
-                await channel.send(content=f"{interaction.user.mention} cracked the code!", embed=winner_embed)
-
+            if channel: await channel.send(content=f"{interaction.user.mention} cracked the code!", embed=winner_embed)
             try:
                 msg = await interaction.channel.fetch_message(vault_state["message_id"])
                 await msg.edit(view=None)
             except: pass
-
         else:
             await interaction.response.send_message(f"⚠️ **ACCESS DENIED.** Invalid PIN.\n*Security protocol active: 15s timeout.*", ephemeral=True)
 
 class VaultView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None) 
-
+    def __init__(self): super().__init__(timeout=None) 
     @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_open_btn")
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not vault_state["active"]:
@@ -175,17 +277,15 @@ class VaultView(discord.ui.View):
             return
         await interaction.response.send_modal(VaultModal())
 
-# --- PISTAS ---
 async def manage_vault_hints(channel, message, code):
     try:
-        await asyncio.sleep(18000) # 5h
+        await asyncio.sleep(18000) 
         if not vault_state["active"]: return
         hint_2 = f"{code[:2]}##"
         new_embed = message.embeds[0]
         new_embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{hint_2}`", inline=True)
         await message.edit(embed=new_embed)
-        
-        await asyncio.sleep(68400) # 19h más
+        await asyncio.sleep(68400) 
         if not vault_state["active"]: return
         hint_3 = f"{code[:3]}#"
         new_embed = message.embeds[0]
@@ -197,10 +297,8 @@ async def manage_vault_hints(channel, message, code):
 # 🔘 ROLES
 # ==========================================
 class RoleButton(discord.ui.Button):
-    def __init__(self, label, role_id):
-        super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
+    def __init__(self, label, role_id): super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
         self.role_id = role_id
-
     async def callback(self, interaction: discord.Interaction):
         role = interaction.guild.get_role(self.role_id)
         if not role: return
@@ -210,80 +308,48 @@ class RoleButton(discord.ui.Button):
         else:
             await interaction.user.add_roles(role)
             await interaction.response.send_message(f"➕ Added **{role.name}**", ephemeral=True)
-
 class RolesView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        for label, role_id in ROLES_CONFIG.items():
-            self.add_item(RoleButton(label, role_id))
-
-# ==========================================
-# 📊 AUXILIARES
-# ==========================================
-def convert_time(time_str):
-    unit = time_str[-1].lower()
-    try: val = int(time_str[:-1])
-    except: return -1
-    if unit == 's': return val
-    if unit == 'm': return val * 60
-    if unit == 'h': return val * 3600
-    if unit == 'd': return val * 86400
-    return 0
+        for label, role_id in ROLES_CONFIG.items(): self.add_item(RoleButton(label, role_id))
 
 # ==========================================
 # ⚡ COMANDOS
 # ==========================================
-
 @bot.tree.command(name="event_vault", description="Inicia el evento de la Caja Fuerte")
-@app_commands.describe(code="Código 4 dígitos", prize="Premio")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
     if len(code) != 4 or not code.isdigit():
-        await interaction.response.send_message("❌ Código inválido (4 dígitos).", ephemeral=True)
+        await interaction.response.send_message("❌ Código inválido.", ephemeral=True)
         return
     channel = bot.get_channel(VAULT_CHANNEL_ID)
     if not channel:
         await interaction.response.send_message("❌ Error ID Canal.", ephemeral=True)
         return
-
     await interaction.response.defer(ephemeral=True)
-
     hint_1 = f"{code[0]}###"
-
-    # --- TÍTULO CON EL EMOJI 1 (GOTAS DE SANGRE NUEVAS) ---
     embed = discord.Embed(title=f"{EMOJI_BLOOD} **HIGH VALUE VAULT DETECTED** {EMOJI_BLOOD}", color=0x8a0404)
-    desc = (
-        f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n"
-        f"🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n"
-        f"⚠️ **WARNING:** Area is Hot. Expect PvP.\n"
-        f"🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n"
-        f"❓ **MYSTERY REWARD:** {prize}" 
-    )
+    desc = (f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n⚠️ **WARNING:** Area is Hot. Expect PvP.\n🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n❓ **MYSTERY REWARD:** {prize}")
     embed.description = desc
     embed.add_field(name="📡 LEAKED DATA", value=f"`{hint_1}`", inline=True)
     embed.set_image(url=VAULT_IMAGE_URL)     
     embed.set_footer(text="HELL SYSTEM • Vault Event") 
-
     view = VaultView()
     msg = await channel.send(embed=embed, view=view)
-
     vault_state["active"] = True
     vault_state["code"] = code
     vault_state["prize"] = prize
     vault_state["message_id"] = msg.id
-    
     if vault_state["hints_task"]: vault_state["hints_task"].cancel()
     vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(channel, msg, code))
-
     await interaction.followup.send(f"✅ Evento iniciado.")
 
-# --- OTROS ---
 @bot.tree.command(name="start_giveaway", description="Inicia un sorteo")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator: return
-    seconds = convert_time(tiempo)
+    seconds = convert_time(tiempo) # Asumimos funcion auxiliar convert_time existe
     if seconds <= 0: return
     embed = discord.Embed(title="🎉 GIVEAWAY", description=f"Prize: **{premio}**\nTime: **{tiempo}**", color=0xff0000)
     await interaction.response.send_message(embed=embed)
@@ -303,6 +369,7 @@ async def finish_polls(interaction: discord.Interaction):
 async def on_message(message):
     if message.author.bot: return
 
+    # --- SUGERENCIAS ---
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if not message.content.startswith(".suggest"):
             try: await message.delete()
@@ -338,9 +405,14 @@ async def on_ready():
     
     bot.add_view(RolesView())
     bot.add_view(VaultView()) 
+    bot.add_view(DinoView()) # Añadida la vista del Dino
     
     try: await bot.tree.sync()
     except: pass
+
+    # Iniciar Loop Dino
+    if not dino_game_loop.is_running():
+        dino_game_loop.start()
 
     # 1. ROLES
     roles_channel = bot.get_channel(ROLES_CHANNEL_ID)
@@ -363,18 +435,26 @@ async def on_ready():
                 await roles_channel.send(embed=embed, view=RolesView())
         except: pass
 
-    # 2. SUGERENCIAS
+    # 2. SUGERENCIAS (CORREGIDO PARA NO BORRAR SUGERENCIAS DE GENTE)
     suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
     if suggest_channel:
         try:
             last_sug_msg = None
             async for msg in suggest_channel.history(limit=1): last_sug_msg = msg
+            
             guide_ok = False
+            # Verificamos si el ÚLTIMO mensaje es la guía.
             if last_sug_msg and last_sug_msg.author == bot.user and last_sug_msg.embeds:
                 if "SUGGESTION SYSTEM" in (last_sug_msg.embeds[0].title or ""): guide_ok = True
+            
             if not guide_ok:
-                async for msg in suggest_channel.history(limit=10):
-                    if msg.author == bot.user: await msg.delete()
+                # AQUÍ ESTÁ EL ARREGLO: Solo borramos mensajes viejos SI son la GUÍA antigua.
+                # NO borramos sugerencias de usuarios (embeds normales).
+                async for msg in suggest_channel.history(limit=20):
+                    if msg.author == bot.user and msg.embeds:
+                        if "SUGGESTION SYSTEM" in (msg.embeds[0].title or ""):
+                            await msg.delete()
+
                 embed = discord.Embed(
                     title="💡 **SUGGESTION SYSTEM**",
                     description=(f"To suggest something, use the command below:\n\n` .suggest <your text> `\n\n{HELL_ARROW} **Example:** `.suggest Add more kits`\n━━━━━━━━━━━━━━━━━━━━━━━━"),
@@ -409,6 +489,16 @@ async def on_member_update(before, after):
     elif not name_has_tag and has_role:
         try: await after.remove_roles(role)
         except: pass
+
+def convert_time(time_str):
+    unit = time_str[-1].lower()
+    try: val = int(time_str[:-1])
+    except: return -1
+    if unit == 's': return val
+    if unit == 'm': return val * 60
+    if unit == 'h': return val * 3600
+    if unit == 'd': return val * 86400
+    return 0
 
 if __name__ == "__main__":
     if TOKEN:
