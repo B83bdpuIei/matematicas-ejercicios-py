@@ -56,12 +56,18 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- EMOJIS & IMAGEN ---
+# --- EMOJIS & ESTÉTICA GENERAL ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
+
+# --- EMOJIS ESPECIALES VAULT ---
+EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" # Decoración Título
+EMOJI_CROWN = "<a:yelow_crown:1219625559747858523>" # Winner
+EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" # Code
+EMOJI_LOOT  = "<:red:1339349944741396590>" # Loot
 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
@@ -133,9 +139,14 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
 
             await interaction.response.send_message(f"✅ **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
             
+            # --- EMBED DE GANADOR CON TUS EMOJIS ---
             winner_embed = discord.Embed(
                 title="🎉 VAULT CRACKED! 🎉",
-                description=f"👑 **WINNER:** {interaction.user.mention}\n🔓 **CODE:** `{guess}`\n🎁 **LOOT:** {vault_state['prize']}",
+                description=(
+                    f"{EMOJI_CROWN} **WINNER:** {interaction.user.mention}\n"
+                    f"{EMOJI_CODE} **CODE:** `{guess}`\n"
+                    f"{EMOJI_LOOT} **LOOT:** {vault_state['prize']}"
+                ),
                 color=0xFFD700
             )
             winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") 
@@ -241,8 +252,8 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
 
     hint_1 = f"{code[0]}###"
 
-    # --- TEXTO AGRESIVO / PVP (OPCIÓN C MEJORADA) ---
-    embed = discord.Embed(title=f"🩸 **HIGH VALUE VAULT DETECTED** 🩸", color=0x8a0404)
+    # --- TÍTULO CON EL EMOJI 1 (GOTAS DE SANGRE NUEVAS) ---
+    embed = discord.Embed(title=f"{EMOJI_BLOOD} **HIGH VALUE VAULT DETECTED** {EMOJI_BLOOD}", color=0x8a0404)
     desc = (
         f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n"
         f"🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n"
