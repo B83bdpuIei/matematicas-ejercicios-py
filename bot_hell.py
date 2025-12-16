@@ -9,13 +9,18 @@ import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER
+# 🚑 FAKE WEB SERVER (CORREGIDO PARA UPTIMEROBOT)
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"HELL SYSTEM ACTIVE")
+    
+    # ESTO ES LO QUE FALTABA PARA QUE NO DE ERROR 501
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
 
 def run_fake_server():
     port = int(os.environ.get("PORT", 8080))
@@ -395,30 +400,22 @@ async def on_ready():
         except Exception as e:
             print(f"⚠️ Error en roles: {e}")
 
-    # 3. MENÚ DE SUGERENCIAS (NUEVO HEADER FIJO)
+    # 3. MENÚ DE SUGERENCIAS
     suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
     if suggest_channel:
         try:
-            # Verificamos si ya está el mensaje de guía
             last_sug_msg = None
             async for msg in suggest_channel.history(limit=1): last_sug_msg = msg
             
             guide_ok = False
-            # Si el ultimo mensaje es del bot y tiene el titulo correcto, asumimos que está bien
             if last_sug_msg and last_sug_msg.author == bot.user and last_sug_msg.embeds:
                 if "SUGGESTION SYSTEM" in (last_sug_msg.embeds[0].title or ""): guide_ok = True
             
-            # Si no es el último mensaje (porque alguien sugirió algo) o no existe, lo enviamos
-            # NOTA: En este canal NO borramos mensajes viejos para no borrar sugerencias de usuarios
-            
             if not guide_ok:
-                # Solo borramos mensajes PROPIOS del bot que sean viejos (limpieza de spam del bot)
                 async for msg in suggest_channel.history(limit=10):
                     if msg.author == bot.user:
-                         # Borramos si es un recordatorio viejo o un menú viejo
                          await msg.delete()
 
-                # Enviamos el Header Nuevo
                 embed = discord.Embed(
                     title="💡 **SUGGESTION SYSTEM**",
                     description=(
