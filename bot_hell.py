@@ -10,7 +10,7 @@ import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (ANTI-CRASH & UPTIMEROBOT)
+# 🚑 FAKE WEB SERVER
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -30,7 +30,7 @@ def run_fake_server():
 threading.Thread(target=run_fake_server, daemon=True).start()
 
 # ==========================================
-# 🔐 CONFIGURACIÓN GENERAL
+# 🔐 CONFIGURACIÓN
 # ==========================================
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
@@ -40,7 +40,7 @@ POLLS_CHANNEL_ID = 1449083865862770819
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
 SUGGEST_CHANNEL_ID = 1449346646465839134
-VAULT_CHANNEL_ID = 1450244608817762465  # <--- ✅ ID ACTUALIZADA
+VAULT_CHANNEL_ID = 1450244608817762465
 
 # --- IDs DE ROLES ---
 ROLES_CONFIG = {
@@ -56,12 +56,11 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- EMOJIS & ESTÉTICA ---
+# --- EMOJIS & IMAGEN ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
-# URL directa a imagen de Vault de ARK (Wiki oficial)
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
@@ -71,10 +70,9 @@ COMMAND_LIST_TEXT = f"""
 {HELL_ARROW} **!recipes** - Ver crafteos del server
 """
 
-# VARIABLES GLOBALES
 suggestion_count = 0
 
-# --- ESTADO DEL EVENTO VAULT ---
+# --- ESTADO VAULT ---
 vault_state = {
     "active": False,
     "code": None,
@@ -82,10 +80,10 @@ vault_state = {
     "message_id": None,
     "hints_task": None
 }
-user_cooldowns = {} # Para guardar tiempos de espera
+user_cooldowns = {} 
 
 # ==========================================
-# ⚙️ SETUP DEL BOT
+# ⚙️ SETUP
 # ==========================================
 intents = discord.Intents.default()
 intents.members = True
@@ -96,12 +94,12 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🏦 SISTEMA VAULT (CAJA FUERTE)
+# 🏦 SISTEMA VAULT
 # ==========================================
 
-class VaultModal(discord.ui.Modal, title="🔐 ENTER VAULT CODE"):
+class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(
-        label="4-Digit Code",
+        label="INSERT PIN CODE",
         placeholder="####",
         min_length=4,
         max_length=4,
@@ -112,99 +110,80 @@ class VaultModal(discord.ui.Modal, title="🔐 ENTER VAULT CODE"):
         user_id = interaction.user.id
         current_time = time.time()
 
-        # 1. Chequeo de Cooldown (15 segundos)
+        # Cooldown
         if user_id in user_cooldowns:
             elapsed = current_time - user_cooldowns[user_id]
             remaining = 15 - elapsed
             if remaining > 0:
-                await interaction.response.send_message(f"⏳ Please wait **{int(remaining)}s** before trying again.", ephemeral=True)
+                await interaction.response.send_message(f"🚫 **SYSTEM LOCKED.** Wait **{int(remaining)}s** for reboot.", ephemeral=True)
                 return
         
-        # Guardar tiempo del intento
         user_cooldowns[user_id] = current_time
 
-        # 2. Verificar si evento sigue activo
         if not vault_state["active"]:
-            await interaction.response.send_message("❌ Event ended.", ephemeral=True)
+            await interaction.response.send_message("❌ Connection lost. Event ended.", ephemeral=True)
             return
 
         guess = self.code_input.value
 
-        # 3. Verificar Código
         if guess == vault_state["code"]:
-            # --- ¡GANADOR! ---
-            vault_state["active"] = False # Cerrar evento
-            
-            # Cancelar pistas
-            if vault_state["hints_task"]:
-                vault_state["hints_task"].cancel()
+            # WINNER
+            vault_state["active"] = False 
+            if vault_state["hints_task"]: vault_state["hints_task"].cancel()
 
-            # Mensaje al usuario
-            await interaction.response.send_message(f"🔓 **ACCESS GRANTED!** Code accepted.", ephemeral=True)
+            await interaction.response.send_message(f"✅ **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
             
-            # Mensaje Público de Ganador
             winner_embed = discord.Embed(
                 title="🎉 VAULT CRACKED! 🎉",
-                description=f"👑 **WINNER:** {interaction.user.mention}\n🔓 **CODE:** `{guess}`\n🎁 **PRIZE:** {vault_state['prize']}",
+                description=f"👑 **WINNER:** {interaction.user.mention}\n🔓 **CODE:** `{guess}`\n🎁 **LOOT:** {vault_state['prize']}",
                 color=0xFFD700
             )
-            winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") # Gif abriendo
-            winner_embed.set_footer(text="Hell Legion System • Vault Event")
+            winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") 
+            winner_embed.set_footer(text="HELL SYSTEM • Vault Event") 
             
             channel = bot.get_channel(VAULT_CHANNEL_ID)
             if channel:
-                await channel.send(content=f"{interaction.user.mention} opened the Vault!", embed=winner_embed)
+                await channel.send(content=f"{interaction.user.mention} cracked the code!", embed=winner_embed)
 
-            # Desactivar botón original (opcional)
             try:
                 msg = await interaction.channel.fetch_message(vault_state["message_id"])
                 await msg.edit(view=None)
             except: pass
 
         else:
-            # --- CÓDIGO INCORRECTO ---
-            await interaction.response.send_message(f"❌ **Wrong code!** Try again in 15 seconds.", ephemeral=True)
+            await interaction.response.send_message(f"⚠️ **ACCESS DENIED.** Invalid PIN.\n*Security protocol active: 15s timeout.*", ephemeral=True)
 
 class VaultView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None) 
 
-    @discord.ui.button(label="Submit Code", style=discord.ButtonStyle.success, emoji="🔓", custom_id="vault_open_btn")
+    @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_open_btn")
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not vault_state["active"]:
-            await interaction.response.send_message("❌ This event is over.", ephemeral=True)
+            await interaction.response.send_message("❌ Target offline.", ephemeral=True)
             return
         await interaction.response.send_modal(VaultModal())
 
-# --- TAREA DE PISTAS (HINTS) ---
+# --- PISTAS ---
 async def manage_vault_hints(channel, message, code):
     try:
-        # PISTA 2: A las 5 Horas
-        await asyncio.sleep(18000) # 5 horas en segundos
-        
+        await asyncio.sleep(18000) # 5h
         if not vault_state["active"]: return
-
         hint_2 = f"{code[:2]}##"
         new_embed = message.embeds[0]
-        # Actualizamos el campo de la pista (index 0 porque es el primer field)
-        new_embed.set_field_at(0, name="🧟 First Hint", value=f"`{hint_2}`", inline=True)
+        new_embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{hint_2}`", inline=True)
         await message.edit(embed=new_embed)
         
-        # PISTA 3: A las 24 Horas (19h mas tarde)
-        await asyncio.sleep(68400) # 19 horas mas
-        
+        await asyncio.sleep(68400) # 19h más
         if not vault_state["active"]: return
-
         hint_3 = f"{code[:3]}#"
         new_embed = message.embeds[0]
-        new_embed.set_field_at(0, name="🧟 First Hint", value=f"`{hint_3}`", inline=True)
+        new_embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{hint_3}`", inline=True)
         await message.edit(embed=new_embed)
-
-    except asyncio.CancelledError:
-        pass
+    except asyncio.CancelledError: pass
 
 # ==========================================
-# 🔘 CLASE DE BOTONES (AUTO-ROLES)
+# 🔘 ROLES
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
@@ -228,7 +207,7 @@ class RolesView(discord.ui.View):
             self.add_item(RoleButton(label, role_id))
 
 # ==========================================
-# 📊 FUNCIONES AUXILIARES
+# 📊 AUXILIARES
 # ==========================================
 def convert_time(time_str):
     unit = time_str[-1].lower()
@@ -241,64 +220,55 @@ def convert_time(time_str):
     return 0
 
 # ==========================================
-# ⚡ COMANDOS SLASH
+# ⚡ COMANDOS
 # ==========================================
 
-# --- COMANDO VAULT ---
 @bot.tree.command(name="event_vault", description="Inicia el evento de la Caja Fuerte")
-@app_commands.describe(code="Código de 4 dígitos (ej: 5821)", prize="Premio a ganar")
+@app_commands.describe(code="Código 4 dígitos", prize="Premio")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
-
     if len(code) != 4 or not code.isdigit():
-        await interaction.response.send_message("❌ El código debe ser de **4 NÚMEROS**.", ephemeral=True)
+        await interaction.response.send_message("❌ Código inválido (4 dígitos).", ephemeral=True)
         return
-
     channel = bot.get_channel(VAULT_CHANNEL_ID)
     if not channel:
-        await interaction.response.send_message("❌ Error: No encuentro el canal VAULT_CHANNEL_ID.", ephemeral=True)
+        await interaction.response.send_message("❌ Error ID Canal.", ephemeral=True)
         return
 
     await interaction.response.defer(ephemeral=True)
 
-    # Preparar Pista Inicial
     hint_1 = f"{code[0]}###"
 
-    # Embed estilo "Lazy Wipe" adaptado a HELL
-    embed = discord.Embed(title=f"✊ **OPEN THE VAULT EVENT** ✊", color=0x2b2d31)
-    
+    # --- TEXTO AGRESIVO / PVP (OPCIÓN C MEJORADA) ---
+    embed = discord.Embed(title=f"🩸 **HIGH VALUE VAULT DETECTED** 🩸", color=0x8a0404)
     desc = (
-        f"🧨 **No need a C4**\n\n"
-        f"🔸 **Guess the code and win the prize**\n"
-        f"🔸 **You can guess every 15 seconds**\n\n"
-        f"🎁 **PRIZE:** {prize}"
+        f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n"
+        f"🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n"
+        f"⚠️ **WARNING:** Area is Hot. Expect PvP.\n"
+        f"🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n"
+        f"❓ **MYSTERY REWARD:** {prize}" 
     )
     embed.description = desc
-    embed.add_field(name="🧟 First Hint", value=f"`{hint_1}`", inline=True)
-    embed.set_thumbnail(url=VAULT_IMAGE_URL) # Imagen pequeña a la derecha (opcional, o usa set_image para grande)
-    embed.set_image(url=VAULT_IMAGE_URL)     # Imagen grande abajo
-    embed.set_footer(text="Hell Legion System • Vault Event")
+    embed.add_field(name="📡 LEAKED DATA", value=f"`{hint_1}`", inline=True)
+    embed.set_image(url=VAULT_IMAGE_URL)     
+    embed.set_footer(text="HELL SYSTEM • Vault Event") 
 
     view = VaultView()
     msg = await channel.send(embed=embed, view=view)
 
-    # Guardar estado
     vault_state["active"] = True
     vault_state["code"] = code
     vault_state["prize"] = prize
     vault_state["message_id"] = msg.id
     
-    # Iniciar cronómetro de pistas
-    if vault_state["hints_task"]:
-        vault_state["hints_task"].cancel()
-    
+    if vault_state["hints_task"]: vault_state["hints_task"].cancel()
     vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(channel, msg, code))
 
-    await interaction.followup.send(f"✅ Evento iniciado con código `{code}` en {channel.mention}.")
+    await interaction.followup.send(f"✅ Evento iniciado.")
 
-
+# --- OTROS ---
 @bot.tree.command(name="start_giveaway", description="Inicia un sorteo")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator: return
@@ -309,28 +279,24 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     msg = await interaction.original_response()
     await msg.add_reaction("🎉")
     await asyncio.sleep(seconds)
-    # Logica simplificada...
 
-@bot.tree.command(name="finish_polls", description="Publica resultados de encuestas.")
+@bot.tree.command(name="finish_polls", description="Publica resultados.")
 async def finish_polls(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator: return
-    await interaction.response.send_message("Procesando encuestas...", ephemeral=True)
-    # Tu logica de polls iría aquí...
+    await interaction.response.send_message("Procesando...", ephemeral=True)
 
 # ==========================================
-# 🛡️ GESTOR DE MENSAJES
+# 🛡️ GESTOR MENSAJES
 # ==========================================
 @bot.event
 async def on_message(message):
     if message.author.bot: return
 
-    # --- SUGERENCIAS ---
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if not message.content.startswith(".suggest"):
             try: await message.delete()
             except: pass
             return
-        
         try: await message.delete()
         except: pass
         suggestion_content = message.content[8:].strip()
@@ -338,7 +304,7 @@ async def on_message(message):
         
         embed = discord.Embed(description=f"**{suggestion_content}**", color=0xffaa00)
         embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
-        embed.set_footer(text="Hell Legion System • Suggestions")
+        embed.set_footer(text="HELL SYSTEM • Suggestions") 
         sent_msg = await message.channel.send(embed=embed)
         try:
             await sent_msg.add_reaction(CHECK_ICON)
@@ -346,7 +312,6 @@ async def on_message(message):
         except: pass
         return
 
-    # --- LIMPIEZA COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
         try: await message.delete(delay=120) 
         except: pass 
@@ -360,14 +325,55 @@ async def on_message(message):
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE - {bot.user}")
     
-    # ⚠️ IMPORTANTE: Añadimos las Views para que los botones funcionen al reiniciar
     bot.add_view(RolesView())
     bot.add_view(VaultView()) 
     
     try: await bot.tree.sync()
     except: pass
 
-    # 4. ESCÁNER DE NOMBRES
+    # 1. ROLES
+    roles_channel = bot.get_channel(ROLES_CHANNEL_ID)
+    if roles_channel:
+        try:
+            last_role_msg = None
+            async for msg in roles_channel.history(limit=1): last_role_msg = msg
+            roles_ok = False
+            if last_role_msg and last_role_msg.author == bot.user and last_role_msg.embeds:
+                if "NOTIFICATIONS & ACCESS" in (last_role_msg.embeds[0].title or ""): roles_ok = True
+            if not roles_ok:
+                async for msg in roles_channel.history(limit=10):
+                    if msg.author == bot.user: await msg.delete()
+                embed = discord.Embed(
+                    title=f"{NOTIFICATION_ICON} **NOTIFICATIONS & ACCESS**",
+                    description=(f"{HELL_ARROW} Click the buttons below to toggle your roles.\n{HELL_ARROW} Select the channels you want to see.\n━━━━━━━━━━━━━━━━━━━━━━━━"),
+                    color=0x990000
+                )
+                embed.set_footer(text="HELL SYSTEM • Auto-Roles") 
+                await roles_channel.send(embed=embed, view=RolesView())
+        except: pass
+
+    # 2. SUGERENCIAS
+    suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
+    if suggest_channel:
+        try:
+            last_sug_msg = None
+            async for msg in suggest_channel.history(limit=1): last_sug_msg = msg
+            guide_ok = False
+            if last_sug_msg and last_sug_msg.author == bot.user and last_sug_msg.embeds:
+                if "SUGGESTION SYSTEM" in (last_sug_msg.embeds[0].title or ""): guide_ok = True
+            if not guide_ok:
+                async for msg in suggest_channel.history(limit=10):
+                    if msg.author == bot.user: await msg.delete()
+                embed = discord.Embed(
+                    title="💡 **SUGGESTION SYSTEM**",
+                    description=(f"To suggest something, use the command below:\n\n` .suggest <your text> `\n\n{HELL_ARROW} **Example:** `.suggest Add more kits`\n━━━━━━━━━━━━━━━━━━━━━━━━"),
+                    color=0x990000
+                )
+                embed.set_footer(text="HELL SYSTEM • Suggestions") 
+                await suggest_channel.send(embed=embed)
+        except: pass
+
+    # 4. NOMBRES
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
