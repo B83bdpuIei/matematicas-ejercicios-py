@@ -7,6 +7,7 @@ import random
 import threading
 import re
 import time
+import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -43,6 +44,9 @@ SUGGEST_CHANNEL_ID = 1449346646465839134
 VAULT_CHANNEL_ID = 1450244608817762465
 DINO_CHANNEL_ID = 1450244689285353544 
 
+# --- NOMBRE DEL CANAL DE TIENDA (NUEVO) ---
+SHOP_CHANNEL_NAME = "「🔥」hell-store"
+
 # --- IDs DE ROLES ---
 ROLES_CONFIG = {
     "Ping": 1199101577127014541,
@@ -57,13 +61,13 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- EMOJIS NUEVOS SOLICITADOS (GLOBALES) ---
-EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" # Solo Título Dino
-EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"    # Recompensas
-EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"        # Correcto / Acierto
-EMOJI_WINNER     = "<a:party:1450625235383488649>"        # Winner
-EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"   # Answer Arrow
-EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"      # Points
+# --- EMOJIS (GLOBALES) ---
+EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
+EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"    
+EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"        
+EMOJI_WINNER     = "<a:party:1450625235383488649>"        
+EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"   
+EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"      
 
 # --- EMOJIS & ESTÉTICA ANTIGUOS ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
@@ -79,8 +83,25 @@ EMOJI_CODE  = "<a:emoji_68:1328804237546881126>"
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
 
+# --- ARTÍCULOS TIENDA ---
+SHOP_ITEMS = [
+    {"name": "Starter Kit", "price": 3000, "desc": "Full Metal Kit + Cryos"},
+    {"name": "Dino Color Change", "price": 7500, "desc": "Change color of 1 Dino"},
+    {"name": "Turret Filler (1x)", "price": 12000, "desc": "Fill 1 Turret Box"},
+    {"name": "Base Rename", "price": 20000, "desc": "Rename Tribe/Base"},
+    {"name": "VIP Bronze (3 Days)", "price": 50000, "desc": "Trial VIP Role"}
+]
+
+# --- TEXTO DE LISTA DE COMANDOS (SOLO JUGADORES) ---
 COMMAND_LIST_TEXT = f"""
+**🛠️ PLAYER COMMANDS**
 {HELL_ARROW} **!recipes** - Ver crafteos del server
+{HELL_ARROW} **!points** - Ver tus puntos actuales
+{HELL_ARROW} **.suggest <texto>** - Enviar sugerencia
+
+**🎲 GAMES REWARDS**
+{HELL_ARROW} **Guess Dino:** +150 {EMOJI_POINTS}
+{HELL_ARROW} **Vault Event:** +2000 {EMOJI_POINTS}
 """
 
 # --- LISTA DE DINOSAURIOS (ARK) ---
@@ -96,8 +117,6 @@ ARK_DINOS = [
     "Troodon", "Wyvern", "Yutyrannus", "Velonasaur", "Snow Owl", "Managarmr"
 ]
 
-suggestion_count = 0
-
 # --- ESTADOS ---
 vault_state = {
     "active": False,
@@ -107,13 +126,47 @@ vault_state = {
     "hints_task": None
 }
 user_cooldowns = {} 
-
-# Estado del Minijuego Dino
 dino_game_state = {
     "active": False,
     "current_dino": None,
     "message_id": None
 }
+
+# --- SISTEMA DE PUNTOS (JSON) ---
+POINTS_FILE = "points.json"
+
+def load_points():
+    if not os.path.exists(POINTS_FILE):
+        return {}
+    try:
+        with open(POINTS_FILE, "r") as f:
+            return json.load(f)
+    except: return {}
+
+def save_points(data):
+    with open(POINTS_FILE, "w") as f:
+        json.dump(data, f)
+
+def add_points_to_user(user_id, amount):
+    data = load_points()
+    uid = str(user_id)
+    if uid not in data: data[uid] = 0
+    data[uid] += amount
+    save_points(data)
+    return data[uid]
+
+def remove_points_from_user(user_id, amount):
+    data = load_points()
+    uid = str(user_id)
+    if uid not in data: data[uid] = 0
+    if data[uid] < amount: return False
+    data[uid] -= amount
+    save_points(data)
+    return True
+
+def get_user_points(user_id):
+    data = load_points()
+    return data.get(str(user_id), 0)
 
 # ==========================================
 # ⚙️ SETUP
@@ -146,28 +199,24 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
         correct = dino_game_state["current_dino"].lower()
 
         if guess == correct:
-            # WINNER
-            dino_game_state["active"] = False # Fin del juego actual
-            points_won = 0 
+            dino_game_state["active"] = False 
+            points_won = 150 
+            add_points_to_user(interaction.user.id, points_won)
 
-            # Mensaje efímero
             await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
 
-            # Anuncio Público
             embed = discord.Embed(color=0x00FF00)
             embed.description = (
                 f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
                 f"{EMOJI_ANSWER} **ANSWER:** `{dino_game_state['current_dino']}`\n"
-                f"{EMOJI_POINTS} **POINTS:** {points_won}"
+                f"{EMOJI_POINTS} **POINTS:** +{points_won}"
             )
-            # --- FOOTER CAMBIADO ---
             embed.set_footer(text="Hell System • Dino Games")
             
             channel = bot.get_channel(DINO_CHANNEL_ID)
             if channel:
                 await channel.send(embed=embed)
             
-            # Desactivar botón del mensaje original
             try:
                 msg = await channel.fetch_message(dino_game_state["message_id"])
                 await msg.edit(view=None)
@@ -192,21 +241,16 @@ async def dino_game_loop():
     channel = bot.get_channel(DINO_CHANNEL_ID)
     if not channel: return
 
-    # 1. Si había un juego activo y nadie ganó
     if dino_game_state["active"]:
         fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n{EMOJI_ANSWER} The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
-        # --- FOOTER CAMBIADO ---
         fail_embed.set_footer(text="Hell System • Dino Games")
         await channel.send(embed=fail_embed)
-        
         try:
             old_msg = await channel.fetch_message(dino_game_state["message_id"])
             await old_msg.edit(view=None)
         except: pass
 
-    # 2. Iniciar Nuevo Juego
     dino_real_name = random.choice(ARK_DINOS)
-    
     char_list = list(dino_real_name.upper())
     random.shuffle(char_list)
     scrambled_name = "".join(char_list)
@@ -215,20 +259,17 @@ async def dino_game_loop():
         random.shuffle(char_list)
         scrambled_name = "".join(char_list)
 
-    # 3. Enviar Mensaje
     embed = discord.Embed(title=f"{EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
     embed.description = (
         f"Unscramble the name of this creature!\n\n"
         f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
         f"Click the button to answer. You have **20 minutes**!"
     )
-    # --- FOOTER CAMBIADO ---
     embed.set_footer(text="Hell System • Dino Games")
 
     view = DinoView()
     msg = await channel.send(embed=embed, view=view)
 
-    # 4. Guardar Estado
     dino_game_state["active"] = True
     dino_game_state["current_dino"] = dino_real_name
     dino_game_state["message_id"] = msg.id
@@ -258,11 +299,14 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
             
+            bonus_points = 2000
+            add_points_to_user(interaction.user.id, bonus_points)
+
             await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
             
             winner_embed = discord.Embed(
                 title="🎉 VAULT CRACKED! 🎉",
-                description=f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_REWARD} **LOOT:** {vault_state['prize']}",
+                description=f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_REWARD} **LOOT:** {vault_state['prize']}\n{EMOJI_POINTS} **BONUS:** +{bonus_points}",
                 color=0xFFD700
             )
             winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") 
@@ -330,8 +374,53 @@ class RolesView(discord.ui.View):
             self.add_item(RoleButton(label, role_id))
 
 # ==========================================
-# ⚡ COMANDOS
+# ⚡ COMANDOS ADMIN (SLASH /)
 # ==========================================
+
+@bot.tree.command(name="add_points", description="ADMIN: Añadir puntos a un usuario")
+async def add_points(interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+        return
+    
+    new_bal = add_points_to_user(usuario.id, cantidad)
+    await interaction.response.send_message(f"✅ Se añadieron **{cantidad}** {EMOJI_POINTS} a {usuario.mention}. Nuevo saldo: **{new_bal}**")
+
+@bot.tree.command(name="remove_points", description="ADMIN: Quitar puntos a un usuario")
+async def remove_points(interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+        return
+    
+    success = remove_points_from_user(usuario.id, cantidad)
+    if success:
+        new_bal = get_user_points(usuario.id)
+        await interaction.response.send_message(f"✅ Se retiraron **{cantidad}** {EMOJI_POINTS} a {usuario.mention}. Nuevo saldo: **{new_bal}**")
+    else:
+        await interaction.response.send_message(f"❌ El usuario no tiene suficientes puntos.", ephemeral=True)
+
+# ==========================================
+# ⚡ COMANDOS USUARIO (PREFIX !)
+# ==========================================
+
+@bot.command(name="points")
+async def check_points(ctx):
+    bal = get_user_points(ctx.author.id)
+    msg = await ctx.send(f"💰 {ctx.author.mention}, tienes **{bal}** {EMOJI_POINTS} Puntos.")
+    try:
+        await ctx.message.delete()
+        await asyncio.sleep(10)
+        await msg.delete()
+    except: pass
+
+@bot.command(name="recipes")
+async def show_recipes(ctx):
+    await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Aquí deberías poner la imagen o lista de crafteos)*")
+
+# ==========================================
+# ⚡ EVENTOS SLASH (ADMIN)
+# ==========================================
+
 @bot.tree.command(name="event_vault", description="Inicia el evento de la Caja Fuerte")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     if not interaction.user.guild_permissions.administrator:
@@ -379,7 +468,7 @@ async def finish_polls(interaction: discord.Interaction):
     await interaction.response.send_message("Procesando...", ephemeral=True)
 
 # ==========================================
-# 🛡️ GESTOR MENSAJES
+# 🛡️ GESTOR MENSAJES (.suggest y limpieza)
 # ==========================================
 @bot.event
 async def on_message(message):
@@ -406,6 +495,7 @@ async def on_message(message):
         except: pass
         return
 
+    # --- LIMPIEZA CANAL COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
         try: await message.delete(delay=120) 
         except: pass 
@@ -429,7 +519,7 @@ async def on_ready():
     if not dino_game_loop.is_running():
         dino_game_loop.start()
 
-    # 1. ROLES
+    # --- 1. ROLES ---
     roles_channel = bot.get_channel(ROLES_CHANNEL_ID)
     if roles_channel:
         try:
@@ -450,7 +540,65 @@ async def on_ready():
                 await roles_channel.send(embed=embed, view=RolesView())
         except: pass
 
-    # 2. SUGERENCIAS
+    # --- 2. SETUP DE TIENDA (AUTO-SEARCH/CREATE) ---
+    for guild in bot.guilds:
+        shop_channel = discord.utils.get(guild.text_channels, name=SHOP_CHANNEL_NAME)
+        
+        # Si no existe, crear
+        if not shop_channel:
+            try:
+                overwrites = {
+                    guild.default_role: discord.PermissionOverwrite(send_messages=False),
+                    guild.me: discord.PermissionOverwrite(send_messages=True)
+                }
+                shop_channel = await guild.create_text_channel(SHOP_CHANNEL_NAME, overwrites=overwrites)
+                print(f"✅ Canal de tienda creado: {SHOP_CHANNEL_NAME}")
+            except Exception as e:
+                print(f"❌ Error creando tienda: {e}")
+        
+        # Si existe, postear menú
+        if shop_channel:
+            last_msg = None
+            async for msg in shop_channel.history(limit=1): last_msg = msg
+            
+            shop_ok = False
+            if last_msg and last_msg.author == bot.user and last_msg.embeds:
+                if "BLACK MARKET SHOP" in (last_msg.embeds[0].title or ""): shop_ok = True
+            
+            if not shop_ok:
+                await shop_channel.purge(limit=10)
+                embed = discord.Embed(title=f"{EMOJI_REWARD} **BLACK MARKET SHOP** {EMOJI_REWARD}", color=0x9900FF)
+                embed.description = f"Earn {EMOJI_POINTS} by winning minigames.\n{HELL_ARROW} **Dino Win:** 150 Pts\n{HELL_ARROW} **Vault Win:** 2000 Pts\n\n**⚠️ OPEN A TICKET TO BUY ⚠️**\n━━━━━━━━━━━━━━━━━━━━━━━━"
+                for item in SHOP_ITEMS:
+                    embed.add_field(
+                        name=f"📦 {item['name']}",
+                        value=f"{EMOJI_POINTS} **{item['price']}**\n*{item['desc']}*",
+                        inline=False
+                    )
+                embed.set_footer(text="Hell System • Economy")
+                await shop_channel.send(embed=embed)
+
+    # --- 3. ACTUALIZAR LISTA DE COMANDOS ---
+    cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
+    if cmd_channel:
+        try:
+            last_cmd_msg = None
+            async for msg in cmd_channel.history(limit=1):
+                 if msg.author == bot.user: last_cmd_msg = msg; break
+            
+            list_ok = False
+            if last_cmd_msg and "PLAYER COMMANDS" in last_cmd_msg.content:
+                list_ok = True
+                if last_cmd_msg.content != COMMAND_LIST_TEXT:
+                    await last_cmd_msg.edit(content=COMMAND_LIST_TEXT)
+            
+            if not list_ok:
+                async for msg in cmd_channel.history(limit=10):
+                    if msg.author == bot.user: await msg.delete()
+                await cmd_channel.send(COMMAND_LIST_TEXT)
+        except: pass
+
+    # --- 4. SUGERENCIAS ---
     suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
     if suggest_channel:
         try:
@@ -476,7 +624,7 @@ async def on_ready():
                 await suggest_channel.send(embed=embed)
         except: pass
 
-    # 4. NOMBRES
+    # --- 5. NOMBRES ---
     for guild in bot.guilds:
         role = guild.get_role(SUPPORT_ROLE_ID)
         if role:
