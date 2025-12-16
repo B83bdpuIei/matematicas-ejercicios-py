@@ -72,7 +72,7 @@ CHECK_ICON = "<a:Check_hell:1450255850508779621>"
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
-# Emojis Vault (Actualizados con los globales donde corresponde)
+# Emojis Vault
 EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
 EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
 
@@ -150,17 +150,16 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             dino_game_state["active"] = False # Fin del juego actual
             points_won = 0 
 
-            # Mensaje efímero al usuario
+            # Mensaje efímero
             await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
 
-            # Anuncio Público (EMOJIS ACTUALIZADOS)
+            # Anuncio Público
             embed = discord.Embed(color=0x00FF00)
             embed.description = (
                 f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
                 f"{EMOJI_ANSWER} **ANSWER:** `{dino_game_state['current_dino']}`\n"
                 f"{EMOJI_POINTS} **POINTS:** {points_won}"
             )
-            # FOOTER ACTUALIZADO
             embed.set_footer(text="Dino Games")
             
             channel = bot.get_channel(DINO_CHANNEL_ID)
@@ -192,15 +191,12 @@ async def dino_game_loop():
     channel = bot.get_channel(DINO_CHANNEL_ID)
     if not channel: return
 
-    # 1. Si había un juego activo y nadie ganó, anunciar fallo
+    # 1. Si había un juego activo y nadie ganó
     if dino_game_state["active"]:
-        # Se acabó el tiempo (EMOJI ANSWER ACTUALIZADO)
         fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n{EMOJI_ANSWER} The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
-        # FOOTER ACTUALIZADO
         fail_embed.set_footer(text="Dino Games")
         await channel.send(embed=fail_embed)
         
-        # Desactivar el botón viejo
         try:
             old_msg = await channel.fetch_message(dino_game_state["message_id"])
             await old_msg.edit(view=None)
@@ -209,24 +205,21 @@ async def dino_game_loop():
     # 2. Iniciar Nuevo Juego
     dino_real_name = random.choice(ARK_DINOS)
     
-    # Scramble (Revolver letras)
     char_list = list(dino_real_name.upper())
     random.shuffle(char_list)
     scrambled_name = "".join(char_list)
     
-    # Asegurarnos de que no salga igual (raro, pero posible)
     while scrambled_name == dino_real_name.upper():
         random.shuffle(char_list)
         scrambled_name = "".join(char_list)
 
-    # 3. Enviar Mensaje (EMOJI TITULO ACTUALIZADO)
+    # 3. Enviar Mensaje
     embed = discord.Embed(title=f"{EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
     embed.description = (
         f"Unscramble the name of this creature!\n\n"
         f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
         f"Click the button to answer. You have **20 minutes**!"
     )
-    # FOOTER ACTUALIZADO
     embed.set_footer(text="Dino Games")
 
     view = DinoView()
@@ -262,12 +255,10 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
             
-            # EMOJI CORRECT (Global)
             await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
             
             winner_embed = discord.Embed(
                 title="🎉 VAULT CRACKED! 🎉",
-                # EMOJIS WINNER Y REWARD ACTUALIZADOS AQUI
                 description=f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_REWARD} **LOOT:** {vault_state['prize']}",
                 color=0xFFD700
             )
@@ -308,11 +299,15 @@ async def manage_vault_hints(channel, message, code):
     except asyncio.CancelledError: pass
 
 # ==========================================
-# 🔘 ROLES
+# 🔘 ROLES (CORREGIDO INDENTATION)
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
-        super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
+        super().__init__(
+            label=label, 
+            style=discord.ButtonStyle.secondary, 
+            custom_id=f"role_{role_id}"
+        )
         self.role_id = role_id
 
     async def callback(self, interaction: discord.Interaction):
@@ -349,7 +344,6 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     await interaction.response.defer(ephemeral=True)
     hint_1 = f"{code[0]}###"
     embed = discord.Embed(title=f"{EMOJI_BLOOD} **HIGH VALUE VAULT DETECTED** {EMOJI_BLOOD}", color=0x8a0404)
-    # EMOJI REWARD AGREGADO A LA DESCRIPCION
     desc = (f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n⚠️ **WARNING:** Area is Hot. Expect PvP.\n🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n{EMOJI_REWARD} **MYSTERY REWARD:** {prize}")
     embed.description = desc
     embed.add_field(name="📡 LEAKED DATA", value=f"`{hint_1}`", inline=True)
@@ -429,7 +423,6 @@ async def on_ready():
     try: await bot.tree.sync()
     except: pass
 
-    # Iniciar Loop Dino
     if not dino_game_loop.is_running():
         dino_game_loop.start()
 
