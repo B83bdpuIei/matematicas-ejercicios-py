@@ -160,7 +160,8 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
                 f"{EMOJI_ANSWER} **ANSWER:** `{dino_game_state['current_dino']}`\n"
                 f"{EMOJI_POINTS} **POINTS:** {points_won}"
             )
-            embed.set_footer(text="Dino Games")
+            # --- FOOTER CAMBIADO ---
+            embed.set_footer(text="Hell System • Dino Games")
             
             channel = bot.get_channel(DINO_CHANNEL_ID)
             if channel:
@@ -194,7 +195,8 @@ async def dino_game_loop():
     # 1. Si había un juego activo y nadie ganó
     if dino_game_state["active"]:
         fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n{EMOJI_ANSWER} The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
-        fail_embed.set_footer(text="Dino Games")
+        # --- FOOTER CAMBIADO ---
+        fail_embed.set_footer(text="Hell System • Dino Games")
         await channel.send(embed=fail_embed)
         
         try:
@@ -220,7 +222,8 @@ async def dino_game_loop():
         f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
         f"Click the button to answer. You have **20 minutes**!"
     )
-    embed.set_footer(text="Dino Games")
+    # --- FOOTER CAMBIADO ---
+    embed.set_footer(text="Hell System • Dino Games")
 
     view = DinoView()
     msg = await channel.send(embed=embed, view=view)
@@ -299,7 +302,7 @@ async def manage_vault_hints(channel, message, code):
     except asyncio.CancelledError: pass
 
 # ==========================================
-# 🔘 ROLES (CORREGIDO INDENTATION)
+# 🔘 ROLES
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
