@@ -57,18 +57,24 @@ ROLES_CONFIG = {
     "Patchs": 1326888505216864361
 }
 
-# --- EMOJIS & ESTÉTICA ---
+# --- EMOJIS NUEVOS SOLICITADOS (GLOBALES) ---
+EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" # Solo Título Dino
+EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"    # Recompensas
+EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"        # Correcto / Acierto
+EMOJI_WINNER     = "<a:party:1450625235383488649>"        # Winner
+EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"   # Answer Arrow
+EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"      # Points
+
+# --- EMOJIS & ESTÉTICA ANTIGUOS ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
-# Emojis Vault
+# Emojis Vault (Actualizados con los globales donde corresponde)
 EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
-EMOJI_CROWN = "<a:yelow_crown:1219625559747858523>" 
 EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
-EMOJI_LOOT  = "<:red:1339349944741396590>" 
 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
@@ -144,16 +150,18 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             dino_game_state["active"] = False # Fin del juego actual
             points_won = 0 
 
-            await interaction.response.send_message(f"✅ **CORRECT!** You guessed it.", ephemeral=True)
+            # Mensaje efímero al usuario
+            await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
 
-            # Anuncio Público
+            # Anuncio Público (EMOJIS ACTUALIZADOS)
             embed = discord.Embed(color=0x00FF00)
             embed.description = (
-                f"🎉 **WINNER:** {interaction.user.mention}\n"
-                f"🦖 **ANSWER:** `{dino_game_state['current_dino']}`\n"
-                f"🪙 **POINTS:** {points_won}"
+                f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
+                f"{EMOJI_ANSWER} **ANSWER:** `{dino_game_state['current_dino']}`\n"
+                f"{EMOJI_POINTS} **POINTS:** {points_won}"
             )
-            embed.set_footer(text="Hell System • Dino Games")
+            # FOOTER ACTUALIZADO
+            embed.set_footer(text="Dino Games")
             
             channel = bot.get_channel(DINO_CHANNEL_ID)
             if channel:
@@ -186,8 +194,10 @@ async def dino_game_loop():
 
     # 1. Si había un juego activo y nadie ganó, anunciar fallo
     if dino_game_state["active"]:
-        # Se acabó el tiempo
-        fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n🦖 The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
+        # Se acabó el tiempo (EMOJI ANSWER ACTUALIZADO)
+        fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n{EMOJI_ANSWER} The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
+        # FOOTER ACTUALIZADO
+        fail_embed.set_footer(text="Dino Games")
         await channel.send(embed=fail_embed)
         
         # Desactivar el botón viejo
@@ -209,14 +219,15 @@ async def dino_game_loop():
         random.shuffle(char_list)
         scrambled_name = "".join(char_list)
 
-    # 3. Enviar Mensaje
-    embed = discord.Embed(title="🦖 WHO IS THE DINO? 🦖", color=0xFFA500)
+    # 3. Enviar Mensaje (EMOJI TITULO ACTUALIZADO)
+    embed = discord.Embed(title=f"{EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
     embed.description = (
         f"Unscramble the name of this creature!\n\n"
         f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
         f"Click the button to answer. You have **20 minutes**!"
     )
-    embed.set_footer(text="Hell System • Minigames")
+    # FOOTER ACTUALIZADO
+    embed.set_footer(text="Dino Games")
 
     view = DinoView()
     msg = await channel.send(embed=embed, view=view)
@@ -250,10 +261,14 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
         if guess == vault_state["code"]:
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
-            await interaction.response.send_message(f"✅ **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
+            
+            # EMOJI CORRECT (Global)
+            await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
+            
             winner_embed = discord.Embed(
                 title="🎉 VAULT CRACKED! 🎉",
-                description=f"{EMOJI_CROWN} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_LOOT} **LOOT:** {vault_state['prize']}",
+                # EMOJIS WINNER Y REWARD ACTUALIZADOS AQUI
+                description=f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_REWARD} **LOOT:** {vault_state['prize']}",
                 color=0xFFD700
             )
             winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") 
@@ -293,7 +308,7 @@ async def manage_vault_hints(channel, message, code):
     except asyncio.CancelledError: pass
 
 # ==========================================
-# 🔘 ROLES (CÓDIGO CORREGIDO AQUÍ)
+# 🔘 ROLES
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
@@ -334,10 +349,11 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     await interaction.response.defer(ephemeral=True)
     hint_1 = f"{code[0]}###"
     embed = discord.Embed(title=f"{EMOJI_BLOOD} **HIGH VALUE VAULT DETECTED** {EMOJI_BLOOD}", color=0x8a0404)
-    desc = (f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n⚠️ **WARNING:** Area is Hot. Expect PvP.\n🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n❓ **MYSTERY REWARD:** {prize}")
+    # EMOJI REWARD AGREGADO A LA DESCRIPCION
+    desc = (f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n⚠️ **WARNING:** Area is Hot. Expect PvP.\n🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n{EMOJI_REWARD} **MYSTERY REWARD:** {prize}")
     embed.description = desc
     embed.add_field(name="📡 LEAKED DATA", value=f"`{hint_1}`", inline=True)
-    embed.set_image(url=VAULT_IMAGE_URL)     
+    embed.set_image(url=VAULT_IMAGE_URL)      
     embed.set_footer(text="HELL SYSTEM • Vault Event") 
     view = VaultView()
     msg = await channel.send(embed=embed, view=view)
@@ -408,7 +424,7 @@ async def on_ready():
     
     bot.add_view(RolesView())
     bot.add_view(VaultView()) 
-    bot.add_view(DinoView()) # Añadida la vista del Dino
+    bot.add_view(DinoView()) 
     
     try: await bot.tree.sync()
     except: pass
@@ -438,7 +454,7 @@ async def on_ready():
                 await roles_channel.send(embed=embed, view=RolesView())
         except: pass
 
-    # 2. SUGERENCIAS (CORREGIDO PARA NO BORRAR SUGERENCIAS DE GENTE)
+    # 2. SUGERENCIAS
     suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
     if suggest_channel:
         try:
@@ -446,13 +462,10 @@ async def on_ready():
             async for msg in suggest_channel.history(limit=1): last_sug_msg = msg
             
             guide_ok = False
-            # Verificamos si el ÚLTIMO mensaje es la guía.
             if last_sug_msg and last_sug_msg.author == bot.user and last_sug_msg.embeds:
                 if "SUGGESTION SYSTEM" in (last_sug_msg.embeds[0].title or ""): guide_ok = True
             
             if not guide_ok:
-                # AQUÍ ESTÁ EL ARREGLO: Solo borramos mensajes viejos SI son la GUÍA antigua.
-                # NO borramos sugerencias de usuarios (embeds normales).
                 async for msg in suggest_channel.history(limit=20):
                     if msg.author == bot.user and msg.embeds:
                         if "SUGGESTION SYSTEM" in (msg.embeds[0].title or ""):
