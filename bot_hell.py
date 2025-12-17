@@ -43,9 +43,16 @@ ROLES_CHANNEL_ID = 1449083960578670614
 SUGGEST_CHANNEL_ID = 1449346646465839134
 VAULT_CHANNEL_ID = 1450244608817762465
 DINO_CHANNEL_ID = 1450244689285353544 
+MINIGAMES_CHANNEL_ID = 1450244729848598618  # <--- NUEVO CANAL MINIJUEGOS
 
-# --- NOMBRE DEL CANAL DE TIENDA (NUEVO) ---
+# --- NOMBRE DEL CANAL DE TIENDA ---
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
+
+# --- URLs IMÁGENES MINIJUEGOS (Pon tus links reales aquí) ---
+IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png" # Drop Rojo Ejemplo
+IMG_POKEMON = "https://upload.wikimedia.org/wikipedia/en/1/1f/Pok%C3%A9mon_Charmander_art.png" # Charmander Ejemplo
+IMG_DINO_TAMING = "https://ark.wiki.gg/images/thumb/7/77/Raptor.png/300px-Raptor.png" # Raptor Ejemplo
+IMG_ALPHA_REX = "https://ark.wiki.gg/images/thumb/3/3e/Alpha_T-Rex.png/300px-Alpha_T-Rex.png" # Alpha Rex
 
 # --- IDs DE ROLES ---
 ROLES_CONFIG = {
@@ -63,11 +70,11 @@ ROLES_CONFIG = {
 
 # --- EMOJIS (GLOBALES) ---
 EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
-EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"    
-EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"        
-EMOJI_WINNER     = "<a:party:1450625235383488649>"        
-EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"   
-EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"      
+EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"     
+EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"         
+EMOJI_WINNER     = "<a:party:1450625235383488649>"         
+EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"    
+EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"       
 
 # --- EMOJIS & ESTÉTICA ANTIGUOS ---
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
@@ -91,18 +98,6 @@ SHOP_ITEMS = [
     {"name": "Base Rename", "price": 20000, "desc": "Rename Tribe/Base"},
     {"name": "VIP Bronze (3 Days)", "price": 50000, "desc": "Trial VIP Role"}
 ]
-
-# --- TEXTO DE LISTA DE COMANDOS (SOLO JUGADORES) ---
-COMMAND_LIST_TEXT = f"""
-**🛠️ PLAYER COMMANDS**
-{HELL_ARROW} **!recipes** - Ver crafteos del server
-{HELL_ARROW} **!points** - Ver tus puntos actuales
-{HELL_ARROW} **.suggest <texto>** - Enviar sugerencia
-
-**🎲 GAMES REWARDS**
-{HELL_ARROW} **Guess Dino:** +150 {EMOJI_POINTS}
-{HELL_ARROW} **Vault Event:** +2000 {EMOJI_POINTS}
-"""
 
 # --- LISTA DE DINOSAURIOS (ARK) ---
 ARK_DINOS = [
@@ -180,7 +175,7 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🦖 MINIGAME: WHO IS THE DINO
+# 🦖 MINIGAME: WHO IS THE DINO (SCRAMBLE)
 # ==========================================
 
 class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
@@ -273,6 +268,185 @@ async def dino_game_loop():
     dino_game_state["active"] = True
     dino_game_state["current_dino"] = dino_real_name
     dino_game_state["message_id"] = msg.id
+
+# ==========================================
+# 🎮 NUEVOS MINIGAMES (Canal ID 1450...)
+# ==========================================
+
+# 1. ARK: DROP ROJO (Velocidad)
+class ArkDropView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="CLAIM DROP", style=discord.ButtonStyle.danger, emoji="🎁")
+    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
+        button.label = f"Loot de {interaction.user.name}"
+        button.style = discord.ButtonStyle.secondary
+        button.disabled = True
+        
+        # Premio en puntos (ej. 500)
+        add_points_to_user(interaction.user.id, 500)
+
+        embed = interaction.message.embeds[0]
+        embed.color = discord.Color.dark_grey()
+        embed.set_footer(text=f"Reclamado por: {interaction.user.display_name} (+500 Puntos)")
+        
+        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.followup.send(f"🔴 **{interaction.user.mention}** abrió el Drop Rojo y ganó 500 puntos!", ephemeral=False)
+        self.stop()
+
+@bot.command()
+async def game_drop(ctx):
+    if ctx.channel.id != MINIGAMES_CHANNEL_ID: return
+    embed = discord.Embed(title="¡SUMINISTRO ROJO CAYENDO!", description="Contiene loot de alto nivel. ¡Reclámalo rápido!", color=discord.Color.red())
+    embed.set_image(url=IMG_ARK_DROP)
+    await ctx.send(embed=embed, view=ArkDropView())
+
+# 2. ARK: TAMEO (Comida Correcta)
+class ArkTameView(discord.ui.View):
+    def __init__(self, correct_food):
+        super().__init__(timeout=30)
+        self.correct_food = correct_food
+
+    async def feed(self, interaction: discord.Interaction, food: str):
+        if food == self.correct_food:
+            add_points_to_user(interaction.user.id, 200)
+            await interaction.response.send_message(f"🦕 **¡TAMEADO!** {interaction.user.mention} le dio {food} y ganó 200 puntos.", ephemeral=False)
+            for child in self.children: child.disabled = True
+            await interaction.message.edit(view=self)
+            self.stop()
+        else:
+            await interaction.response.send_message(f"❌ El dino rechaza {food}. ¡Cuidado!", ephemeral=True)
+
+    @discord.ui.button(label="Carne Cruda 🥩", style=discord.ButtonStyle.danger)
+    async def meat(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.feed(interaction, "Carne")
+
+    @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary)
+    async def berries(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.feed(interaction, "Bayas")
+
+@bot.command()
+async def game_tame(ctx):
+    if ctx.channel.id != MINIGAMES_CHANNEL_ID: return
+    embed = discord.Embed(title="¡Dino Inconsciente!", description="¿Qué come este **Raptor**? (Carne o Bayas)", color=discord.Color.green())
+    embed.set_image(url=IMG_DINO_TAMING)
+    await ctx.send(embed=embed, view=ArkTameView(correct_food="Carne"))
+
+# 3. ARK: CRAFTING (Recetas)
+class ArkCraftView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=30)
+
+    @discord.ui.button(label="Piedra + Madera", style=discord.ButtonStyle.secondary)
+    async def wrong1(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Eso no hace Pólvora...", ephemeral=True)
+
+    @discord.ui.button(label="Carbón + Fósforo", style=discord.ButtonStyle.success)
+    async def correct(self, interaction: discord.Interaction, button: discord.ui.Button):
+        add_points_to_user(interaction.user.id, 100)
+        await interaction.response.send_message(f"🔨 **¡Correcto!** {interaction.user.mention} fabricó Pólvora (+100 Puntos).", ephemeral=False)
+        self.stop()
+
+    @discord.ui.button(label="Fibra + Piel", style=discord.ButtonStyle.secondary)
+    async def wrong2(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Receta incorrecta.", ephemeral=True)
+
+@bot.command()
+async def game_craft(ctx):
+    if ctx.channel.id != MINIGAMES_CHANNEL_ID: return
+    embed = discord.Embed(title="Mesa de Crafteo", description="¿Cuál es la receta para hacer **Pólvora (Gunpowder)**?", color=discord.Color.orange())
+    await ctx.send(embed=embed, view=ArkCraftView())
+
+# 4. ARK: IMPRONTA (Suerte)
+class ArkImprintView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=20)
+        self.needs = random.choice(["Mimos", "Paseo", "Comida"])
+
+    async def check(self, interaction: discord.Interaction, action: str):
+        if action == self.needs:
+            add_points_to_user(interaction.user.id, 300)
+            await interaction.response.send_message(f"❤️ **¡Impronta subida!** {interaction.user.mention} acertó y ganó 300 puntos.", ephemeral=False)
+            for child in self.children: child.disabled = True
+            await interaction.message.edit(view=self)
+            self.stop()
+        else:
+            await interaction.response.send_message(f"El bebé no quiere eso... Quería **{self.needs}**.", ephemeral=True)
+
+    @discord.ui.button(label="Dar Mimos 🧸", style=discord.ButtonStyle.primary)
+    async def cuddle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.check(interaction, "Mimos")
+
+    @discord.ui.button(label="Pasear 🚶", style=discord.ButtonStyle.success)
+    async def walk(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.check(interaction, "Paseo")
+        
+    @discord.ui.button(label="Alimentar 🍖", style=discord.ButtonStyle.danger)
+    async def feed(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.check(interaction, "Comida")
+
+@bot.command()
+async def game_imprint(ctx):
+    if ctx.channel.id != MINIGAMES_CHANNEL_ID: return
+    embed = discord.Embed(title="Crianza de Bebé", description="El bebé llora. **Intenta adivinar qué quiere.**", color=discord.Color.purple())
+    await ctx.send(embed=embed, view=ArkImprintView())
+
+# 5. ARK: ALPHA HUNT (Riesgo)
+class ArkAlphaView(discord.ui.View):
+    @discord.ui.button(label="🗡️ ATACAR ALPHA", style=discord.ButtonStyle.danger)
+    async def attack(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if random.random() < 0.5: # 50% chance
+            add_points_to_user(interaction.user.id, 1000)
+            await interaction.response.send_message(f"🏆 **¡VICTORIA ÉPICA!** {interaction.user.mention} mató al Alpha y ganó **1000 puntos**.", ephemeral=False)
+        else:
+            await interaction.response.send_message(f"💀 **MUERTE...** {interaction.user.mention} fue devorado.", ephemeral=False)
+        
+        button.disabled = True
+        await interaction.message.edit(view=self)
+        self.stop()
+
+@bot.command()
+async def game_alpha(ctx):
+    if ctx.channel.id != MINIGAMES_CHANNEL_ID: return
+    embed = discord.Embed(title="⚠️ ¡ALPHA REX DETECTADO!", description="¿Te arriesgas a atacarlo? (50% Ganar / 50% Morir)", color=discord.Color.dark_red())
+    embed.set_image(url=IMG_ALPHA_REX)
+    await ctx.send(embed=embed, view=ArkAlphaView())
+
+# 6. POKÉMON (Visual)
+class PokemonVisualView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=30)
+
+    async def guess(self, interaction: discord.Interaction, type_guess: str):
+        correct = "Fuego" 
+        if type_guess == correct:
+            add_points_to_user(interaction.user.id, 150)
+            await interaction.response.send_message(f"✅ **¡Correcto!** {interaction.user.mention} ganó 150 puntos.", ephemeral=False)
+            for child in self.children: child.disabled = True
+            await interaction.message.edit(view=self)
+            self.stop()
+        else:
+            await interaction.response.send_message("❌ Tipo incorrecto.", ephemeral=True)
+
+    @discord.ui.button(label="Fuego 🔥", style=discord.ButtonStyle.danger)
+    async def fire(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.guess(interaction, "Fuego")
+
+    @discord.ui.button(label="Agua 💧", style=discord.ButtonStyle.primary)
+    async def water(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.guess(interaction, "Agua")
+        
+    @discord.ui.button(label="Planta 🌿", style=discord.ButtonStyle.success)
+    async def grass(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.guess(interaction, "Planta")
+
+@bot.command()
+async def game_poke(ctx):
+    if ctx.channel.id != MINIGAMES_CHANNEL_ID: return
+    embed = discord.Embed(title="¿Qué tipo es este Pokémon?", color=discord.Color.gold())
+    embed.set_image(url=IMG_POKEMON)
+    await ctx.send(embed=embed, view=PokemonVisualView())
 
 # ==========================================
 # 🏦 SISTEMA VAULT
@@ -497,6 +671,7 @@ async def on_message(message):
 
     # --- LIMPIEZA CANAL COMANDOS ---
     if message.channel.id == CMD_CHANNEL_ID:
+        # El delay=120 significa 2 minutos (120 segundos)
         try: await message.delete(delay=120) 
         except: pass 
 
@@ -578,7 +753,7 @@ async def on_ready():
                 embed.set_footer(text="Hell System • Economy")
                 await shop_channel.send(embed=embed)
 
-    # --- 3. ACTUALIZAR LISTA DE COMANDOS ---
+    # --- 3. ACTUALIZAR LISTA DE COMANDOS (MODO EMBED, SIN RECOMPENSAS) ---
     cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
     if cmd_channel:
         try:
@@ -586,16 +761,35 @@ async def on_ready():
             async for msg in cmd_channel.history(limit=1):
                  if msg.author == bot.user: last_cmd_msg = msg; break
             
+            # Construir Embed
+            embed_cmds = discord.Embed(title=f"🛠️ **SERVER COMMANDS**", color=0x990000)
+            
+            # Campo Jugador
+            embed_cmds.add_field(
+                name="👤 **PLAYER COMMANDS**", 
+                value=f"{HELL_ARROW} **!recipes** - Ver crafteos\n{HELL_ARROW} **!points** - Ver puntos\n{HELL_ARROW} **.suggest <text>** - Sugerencia",
+                inline=False
+            )
+            
+            # Campo Admin
+            embed_cmds.add_field(
+                name="⚡ **ADMIN COMMANDS**", 
+                value=f"{HELL_ARROW} `/start_giveaway`\n{HELL_ARROW} `/event_vault`\n{HELL_ARROW} `/add_points`\n{HELL_ARROW} `/remove_points`\n{HELL_ARROW} `!game_drop`\n{HELL_ARROW} `!game_tame`\n{HELL_ARROW} `!game_craft`",
+                inline=False
+            )
+            
+            embed_cmds.set_footer(text="HELL SYSTEM • Commands")
+
+            # Verificar si hay que reenviar
             list_ok = False
-            if last_cmd_msg and "PLAYER COMMANDS" in last_cmd_msg.content:
-                list_ok = True
-                if last_cmd_msg.content != COMMAND_LIST_TEXT:
-                    await last_cmd_msg.edit(content=COMMAND_LIST_TEXT)
+            if last_cmd_msg and last_cmd_msg.embeds:
+                if "SERVER COMMANDS" in (last_cmd_msg.embeds[0].title or ""):
+                    list_ok = True
             
             if not list_ok:
                 async for msg in cmd_channel.history(limit=10):
                     if msg.author == bot.user: await msg.delete()
-                await cmd_channel.send(COMMAND_LIST_TEXT)
+                await cmd_channel.send(embed=embed_cmds)
         except: pass
 
     # --- 4. SUGERENCIAS ---
