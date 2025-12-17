@@ -31,11 +31,11 @@ def run_fake_server():
 threading.Thread(target=run_fake_server, daemon=True).start()
 
 # ==========================================
-# 🔐 CONFIGURACIÓN
+# 🔐 CONFIGURATION
 # ==========================================
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
-# IDs CANALES
+# IDs CHANNELS
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
@@ -48,54 +48,55 @@ MINIGAMES_CHANNEL_ID = 1450244729848598618
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATOS (IMÁGENES Y CONFIGURACIÓN)
+# 🖼️ DATA (IMAGES & CONFIG)
 # ==========================================
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
+# Updated to English logic
 DATA_TAMING = [
-    {"url": "https://ark.wiki.gg/images/e/e6/Raptor.png", "food": "Carne", "name": "Raptor"},
-    {"url": "https://ark.wiki.gg/images/0/03/Rex.png", "food": "Carne", "name": "T-Rex"},
-    {"url": "https://ark.wiki.gg/images/7/78/Carno.png", "food": "Carne", "name": "Carnotaurus"},
-    {"url": "https://ark.wiki.gg/images/a/a8/Argentavis.png", "food": "Carne", "name": "Argentavis"},
-    {"url": "https://ark.wiki.gg/images/2/2e/Pteranodon.png", "food": "Carne", "name": "Pteranodon"},
-    {"url": "https://ark.wiki.gg/images/c/c1/Allosaurus.png", "food": "Carne", "name": "Allosaurus"},
-    {"url": "https://ark.wiki.gg/images/4/47/Spino.png", "food": "Carne", "name": "Spinosaurus"},
-    {"url": "https://ark.wiki.gg/images/9/9e/Giganotosaurus.png", "food": "Carne", "name": "Giganotosaurus"},
-    {"url": "https://ark.wiki.gg/images/d/d8/Thylacoleo.png", "food": "Carne", "name": "Thylacoleo"},
-    {"url": "https://ark.wiki.gg/images/4/4c/Yutyrannus.png", "food": "Carne", "name": "Yutyrannus"},
-    {"url": "https://ark.wiki.gg/images/2/2f/Triceratops.png", "food": "Bayas", "name": "Triceratops"},
-    {"url": "https://ark.wiki.gg/images/1/12/Stegosaurus.png", "food": "Bayas", "name": "Stegosaurus"},
-    {"url": "https://ark.wiki.gg/images/0/07/Brontosaurus.png", "food": "Bayas", "name": "Brontosaurus"},
-    {"url": "https://ark.wiki.gg/images/5/5a/Parasaur.png", "food": "Bayas", "name": "Parasaur"},
-    {"url": "https://ark.wiki.gg/images/f/f3/Ankylosaurus.png", "food": "Bayas", "name": "Ankylosaurus"},
-    {"url": "https://ark.wiki.gg/images/c/c7/Doedicurus.png", "food": "Bayas", "name": "Doedicurus"},
-    {"url": "https://ark.wiki.gg/images/a/a9/Iguanodon.png", "food": "Bayas", "name": "Iguanodon"},
-    {"url": "https://ark.wiki.gg/images/3/38/Therizinosaurus.png", "food": "Bayas", "name": "Therizinosaurus"},
-    {"url": "https://ark.wiki.gg/images/4/45/Mammoth.png", "food": "Bayas", "name": "Mammoth"},
-    {"url": "https://ark.wiki.gg/images/3/36/Phiomia.png", "food": "Bayas", "name": "Phiomia"},
+    {"url": "https://ark.wiki.gg/images/e/e6/Raptor.png", "food": "Raw Meat", "name": "Raptor"},
+    {"url": "https://ark.wiki.gg/images/0/03/Rex.png", "food": "Raw Meat", "name": "T-Rex"},
+    {"url": "https://ark.wiki.gg/images/7/78/Carno.png", "food": "Raw Meat", "name": "Carnotaurus"},
+    {"url": "https://ark.wiki.gg/images/a/a8/Argentavis.png", "food": "Raw Meat", "name": "Argentavis"},
+    {"url": "https://ark.wiki.gg/images/2/2e/Pteranodon.png", "food": "Raw Meat", "name": "Pteranodon"},
+    {"url": "https://ark.wiki.gg/images/c/c1/Allosaurus.png", "food": "Raw Meat", "name": "Allosaurus"},
+    {"url": "https://ark.wiki.gg/images/4/47/Spino.png", "food": "Raw Meat", "name": "Spinosaurus"},
+    {"url": "https://ark.wiki.gg/images/9/9e/Giganotosaurus.png", "food": "Raw Meat", "name": "Giganotosaurus"},
+    {"url": "https://ark.wiki.gg/images/d/d8/Thylacoleo.png", "food": "Raw Meat", "name": "Thylacoleo"},
+    {"url": "https://ark.wiki.gg/images/4/4c/Yutyrannus.png", "food": "Raw Meat", "name": "Yutyrannus"},
+    {"url": "https://ark.wiki.gg/images/2/2f/Triceratops.png", "food": "Mejoberries", "name": "Triceratops"},
+    {"url": "https://ark.wiki.gg/images/1/12/Stegosaurus.png", "food": "Mejoberries", "name": "Stegosaurus"},
+    {"url": "https://ark.wiki.gg/images/0/07/Brontosaurus.png", "food": "Mejoberries", "name": "Brontosaurus"},
+    {"url": "https://ark.wiki.gg/images/5/5a/Parasaur.png", "food": "Mejoberries", "name": "Parasaur"},
+    {"url": "https://ark.wiki.gg/images/f/f3/Ankylosaurus.png", "food": "Mejoberries", "name": "Ankylosaurus"},
+    {"url": "https://ark.wiki.gg/images/c/c7/Doedicurus.png", "food": "Mejoberries", "name": "Doedicurus"},
+    {"url": "https://ark.wiki.gg/images/a/a9/Iguanodon.png", "food": "Mejoberries", "name": "Iguanodon"},
+    {"url": "https://ark.wiki.gg/images/3/38/Therizinosaurus.png", "food": "Mejoberries", "name": "Therizinosaurus"},
+    {"url": "https://ark.wiki.gg/images/4/45/Mammoth.png", "food": "Mejoberries", "name": "Mammoth"},
+    {"url": "https://ark.wiki.gg/images/3/36/Phiomia.png", "food": "Mejoberries", "name": "Phiomia"},
 ]
 
 DATA_CRAFTING = [
-    {"url": "https://ark.wiki.gg/images/9/9a/Metal_Ingot.png", "mat": "Metal", "name": "Lingote de Metal"},
-    {"url": "https://ark.wiki.gg/images/3/30/Flak_Chestpiece.png", "mat": "Metal", "name": "Pechera de Metal"},
-    {"url": "https://ark.wiki.gg/images/7/72/Longneck_Rifle.png", "mat": "Metal", "name": "Rifle de Largo Alcance"},
-    {"url": "https://ark.wiki.gg/images/3/32/Metal_Pick.png", "mat": "Metal", "name": "Pico de Metal"},
-    {"url": "https://ark.wiki.gg/images/5/54/Industrial_Forge.png", "mat": "Metal", "name": "Forja Industrial"},
-    {"url": "https://ark.wiki.gg/images/b/b9/Stone_Wall.png", "mat": "Piedra/Madera", "name": "Pared de Piedra"},
-    {"url": "https://ark.wiki.gg/images/e/e3/Mortar_and_Pestle.png", "mat": "Piedra/Madera", "name": "Mortero"},
-    {"url": "https://ark.wiki.gg/images/1/1c/Campfire.png", "mat": "Piedra/Madera", "name": "Hoguera"},
-    {"url": "https://ark.wiki.gg/images/7/7c/Wooden_Foundation.png", "mat": "Piedra/Madera", "name": "Cimiento de Madera"},
-    {"url": "https://ark.wiki.gg/images/1/1a/Stone_Arrow.png", "mat": "Piedra/Madera", "name": "Flecha de Piedra"},
-    {"url": "https://ark.wiki.gg/images/b/b4/Hide_Shirt.png", "mat": "Piel/Fibra", "name": "Camisa de Piel"},
-    {"url": "https://ark.wiki.gg/images/a/a5/Cloth_Hat.png", "mat": "Piel/Fibra", "name": "Sombrero de Tela"},
-    {"url": "https://ark.wiki.gg/images/6/6d/Simple_Bed.png", "mat": "Piel/Fibra", "name": "Cama Simple"},
-    {"url": "https://ark.wiki.gg/images/8/88/Saddle.png", "mat": "Piel/Fibra", "name": "Montura Genérica"},
-    {"url": "https://ark.wiki.gg/images/c/c2/Bola.png", "mat": "Piel/Fibra", "name": "Boleadora"},
-    {"url": "https://ark.wiki.gg/images/9/92/C4_Charge.png", "mat": "Avanzado", "name": "C4"},
-    {"url": "https://ark.wiki.gg/images/f/f4/Assault_Rifle.png", "mat": "Avanzado", "name": "Rifle de Asalto"},
-    {"url": "https://ark.wiki.gg/images/e/e8/Heavy_Auto_Turret.png", "mat": "Avanzado", "name": "Torreta Pesada"},
-    {"url": "https://ark.wiki.gg/images/2/26/Cryopod.png", "mat": "Avanzado", "name": "Cryopod"},
-    {"url": "https://ark.wiki.gg/images/3/37/Advanced_Rifle_Bullet.png", "mat": "Avanzado", "name": "Bala de Rifle Avanzado"},
+    {"url": "https://ark.wiki.gg/images/9/9a/Metal_Ingot.png", "mat": "Metal", "name": "Metal Ingot"},
+    {"url": "https://ark.wiki.gg/images/3/30/Flak_Chestpiece.png", "mat": "Metal", "name": "Flak Chestpiece"},
+    {"url": "https://ark.wiki.gg/images/7/72/Longneck_Rifle.png", "mat": "Metal", "name": "Longneck Rifle"},
+    {"url": "https://ark.wiki.gg/images/3/32/Metal_Pick.png", "mat": "Metal", "name": "Metal Pick"},
+    {"url": "https://ark.wiki.gg/images/5/54/Industrial_Forge.png", "mat": "Metal", "name": "Industrial Forge"},
+    {"url": "https://ark.wiki.gg/images/b/b9/Stone_Wall.png", "mat": "Stone/Wood", "name": "Stone Wall"},
+    {"url": "https://ark.wiki.gg/images/e/e3/Mortar_and_Pestle.png", "mat": "Stone/Wood", "name": "Mortar and Pestle"},
+    {"url": "https://ark.wiki.gg/images/1/1c/Campfire.png", "mat": "Stone/Wood", "name": "Campfire"},
+    {"url": "https://ark.wiki.gg/images/7/7c/Wooden_Foundation.png", "mat": "Stone/Wood", "name": "Wooden Foundation"},
+    {"url": "https://ark.wiki.gg/images/1/1a/Stone_Arrow.png", "mat": "Stone/Wood", "name": "Stone Arrow"},
+    {"url": "https://ark.wiki.gg/images/b/b4/Hide_Shirt.png", "mat": "Hide/Fiber", "name": "Hide Shirt"},
+    {"url": "https://ark.wiki.gg/images/a/a5/Cloth_Hat.png", "mat": "Hide/Fiber", "name": "Cloth Hat"},
+    {"url": "https://ark.wiki.gg/images/6/6d/Simple_Bed.png", "mat": "Hide/Fiber", "name": "Simple Bed"},
+    {"url": "https://ark.wiki.gg/images/8/88/Saddle.png", "mat": "Hide/Fiber", "name": "Saddle"},
+    {"url": "https://ark.wiki.gg/images/c/c2/Bola.png", "mat": "Hide/Fiber", "name": "Bola"},
+    {"url": "https://ark.wiki.gg/images/9/92/C4_Charge.png", "mat": "Advanced", "name": "C4 Charge"},
+    {"url": "https://ark.wiki.gg/images/f/f4/Assault_Rifle.png", "mat": "Advanced", "name": "Assault Rifle"},
+    {"url": "https://ark.wiki.gg/images/e/e8/Heavy_Auto_Turret.png", "mat": "Advanced", "name": "Heavy Auto Turret"},
+    {"url": "https://ark.wiki.gg/images/2/26/Cryopod.png", "mat": "Advanced", "name": "Cryopod"},
+    {"url": "https://ark.wiki.gg/images/3/37/Advanced_Rifle_Bullet.png", "mat": "Advanced", "name": "Adv. Rifle Bullet"},
 ]
 
 DATA_BREEDING_IMGS = [
@@ -121,47 +122,43 @@ DATA_BREEDING_IMGS = [
     "https://ark.wiki.gg/images/3/39/Fertilized_Magmasaur_Egg.png"
 ]
 
-# === NUEVA CONFIGURACIÓN ALPHA POR NIVELES ===
 DATA_ALPHAS = [
-    # Nivel FÁCIL (70% win, 300 pts)
+    # EASY (70% win, 300 pts)
     {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 300, "loss": 300, "chance": 0.70, "color": discord.Color.green()},
     {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 300, "loss": 300, "chance": 0.70, "color": discord.Color.green()},
-    
-    # Nivel NORMAL (50% win, 600 pts)
+    # NORMAL (50% win, 600 pts)
     {"url": "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png", "name": "Alpha T-Rex", "win": 600, "loss": 600, "chance": 0.50, "color": discord.Color.gold()},
     {"url": "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png", "name": "Alpha Megalodon", "win": 600, "loss": 600, "chance": 0.50, "color": discord.Color.gold()},
-    
-    # Nivel DIFÍCIL (40% win, 1200 pts)
+    # HARD (40% win, 1200 pts)
     {"url": "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png", "name": "Alpha Wyvern", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
     {"url": "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png", "name": "Alpha Basilisk", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
     {"url": "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png", "name": "Alpha Reaper", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
-
-    # Nivel EXTREMO (30% win, 2500 pts)
+    # EXTREME (30% win, 2500 pts)
     {"url": "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png", "name": "Alpha Mosasaur", "win": 2500, "loss": 2500, "chance": 0.30, "color": discord.Color.purple()},
     {"url": "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png", "name": "Alpha Tusoteuthis", "win": 2500, "loss": 2500, "chance": 0.30, "color": discord.Color.purple()},
 ]
 
 DATA_POKEMON = [
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", "type": "Fuego", "name": "Charizard"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/59.png", "type": "Fuego", "name": "Arcanine"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/257.png", "type": "Fuego", "name": "Blaziken"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png", "type": "Fuego", "name": "Charmander"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/38.png", "type": "Fuego", "name": "Ninetales"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/136.png", "type": "Fuego", "name": "Flareon"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/9.png", "type": "Agua", "name": "Blastoise"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/130.png", "type": "Agua", "name": "Gyarados"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/134.png", "type": "Agua", "name": "Vaporeon"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png", "type": "Agua", "name": "Squirtle"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/55.png", "type": "Agua", "name": "Golduck"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/245.png", "type": "Agua", "name": "Suicune"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/260.png", "type": "Agua", "name": "Swampert"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/3.png", "type": "Planta", "name": "Venusaur"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png", "type": "Planta", "name": "Bulbasaur"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/154.png", "type": "Planta", "name": "Meganium"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/254.png", "type": "Planta", "name": "Sceptile"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/45.png", "type": "Planta", "name": "Vileplume"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/152.png", "type": "Planta", "name": "Chikorita"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/251.png", "type": "Planta", "name": "Celebi"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", "type": "Fire", "name": "Charizard"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/59.png", "type": "Fire", "name": "Arcanine"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/257.png", "type": "Fire", "name": "Blaziken"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png", "type": "Fire", "name": "Charmander"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/38.png", "type": "Fire", "name": "Ninetales"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/136.png", "type": "Fire", "name": "Flareon"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/9.png", "type": "Water", "name": "Blastoise"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/130.png", "type": "Water", "name": "Gyarados"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/134.png", "type": "Water", "name": "Vaporeon"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png", "type": "Water", "name": "Squirtle"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/55.png", "type": "Water", "name": "Golduck"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/245.png", "type": "Water", "name": "Suicune"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/260.png", "type": "Water", "name": "Swampert"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/3.png", "type": "Grass", "name": "Venusaur"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png", "type": "Grass", "name": "Bulbasaur"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/154.png", "type": "Grass", "name": "Meganium"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/254.png", "type": "Grass", "name": "Sceptile"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/45.png", "type": "Grass", "name": "Vileplume"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/152.png", "type": "Grass", "name": "Chikorita"},
+    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/251.png", "type": "Grass", "name": "Celebi"},
 ]
 
 ROLES_CONFIG = {
@@ -215,7 +212,7 @@ ARK_DINOS = [
     "Troodon", "Wyvern", "Yutyrannus", "Velonasaur", "Snow Owl", "Managarmr"
 ]
 
-# --- ESTADOS (GLOBALES) ---
+# --- STATES ---
 vault_state = {
     "active": False,
     "code": None,
@@ -225,10 +222,10 @@ vault_state = {
 }
 user_cooldowns = {} 
 
-# VARIABLES PARA CONTROLAR ÚLTIMO JUEGO ACTIVO
+# VARIABLES FOR LAST GAME
 last_minigame_message = None 
 
-# --- SISTEMA DE PUNTOS ---
+# --- POINTS SYSTEM ---
 POINTS_FILE = "points.json"
 
 def load_points():
@@ -292,13 +289,13 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
     async def on_submit(self, interaction: discord.Interaction):
         guess = self.answer_input.value.strip().lower()
         
-        # Anti-Doble Click Logic (Si alguien ya ganó, el juego se cierra antes)
+        # Anti-Doble Click Logic
         if self.view_ref and self.view_ref.grabbed:
-             await interaction.response.send_message("❌ Alguien fue más rápido.", ephemeral=True)
+             await interaction.response.send_message("❌ Someone was faster.", ephemeral=True)
              return
 
         if guess == self.correct_answer.lower():
-            if self.view_ref: self.view_ref.grabbed = True # Bloqueo global
+            if self.view_ref: self.view_ref.grabbed = True 
             
             points_won = 150 
             add_points_to_user(interaction.user.id, points_won)
@@ -327,7 +324,7 @@ class DinoView(discord.ui.View):
     def __init__(self, correct_dino):
         super().__init__(timeout=None)
         self.correct_dino = correct_dino
-        self.grabbed = False # Candado
+        self.grabbed = False 
 
     @discord.ui.button(label="GUESS THE DINO", style=discord.ButtonStyle.primary, emoji="❓", custom_id="dino_guess_btn_v2")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -366,13 +363,13 @@ async def dino_game_loop():
         await channel.send(embed=embed, view=view)
 
     except Exception as e:
-        print(f"Error en Dino Loop: {e}")
+        print(f"Error in Dino Loop: {e}")
 
 # ==========================================
-# 🎮 CLASES MINIGAMES (Lógica BLINDADA)
+# 🎮 MINIGAMES CLASSES (English)
 # ==========================================
 
-# 1. ARK: DROP ROJO
+# 1. ARK: RED DROP
 class ArkDropView(discord.ui.View):
     def __init__(self): 
         super().__init__(timeout=None)
@@ -380,23 +377,23 @@ class ArkDropView(discord.ui.View):
         
     @discord.ui.button(label="CLAIM DROP", style=discord.ButtonStyle.danger, emoji="🎁", custom_id="drop_claim_btn")
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.grabbed: return # Si ya se pulsó, ignorar
+        if self.grabbed: return 
         self.grabbed = True
         
         try:
-            button.label = f"Loot de {interaction.user.name}"
+            button.label = f"Loot of {interaction.user.name}"
             button.style = discord.ButtonStyle.secondary
             button.disabled = True
             add_points_to_user(interaction.user.id, 500)
             embed = interaction.message.embeds[0]
             embed.color = discord.Color.dark_grey()
-            embed.set_footer(text=f"Reclamado por: {interaction.user.display_name} (+500 Puntos)")
+            embed.set_footer(text=f"Claimed by: {interaction.user.display_name} (+500 Points)")
             await interaction.response.edit_message(embed=embed, view=self)
-            await interaction.followup.send(f"🔴 **{interaction.user.mention}** abrió el Drop Rojo y ganó 500 puntos!", ephemeral=False)
+            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop and won 500 points!", ephemeral=False)
             self.stop()
         except Exception: pass
 
-# 2. ARK: TAMEO
+# 2. ARK: TAMING
 class ArkTameView(discord.ui.View):
     def __init__(self, correct_food, dino_name):
         super().__init__(timeout=None)
@@ -411,21 +408,21 @@ class ArkTameView(discord.ui.View):
         try:
             if food == self.correct_food:
                 add_points_to_user(interaction.user.id, 200)
-                await interaction.response.send_message(f"🦕 **¡TAMEADO!** {interaction.user.mention} le dio {food} al {self.dino_name} (+200 pts).", ephemeral=False)
+                await interaction.response.send_message(f"🦕 **TAMED!** {interaction.user.mention} gave {food} to the {self.dino_name} (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                await interaction.response.send_message(f"❌ El {self.dino_name} rechaza {food}. ¡Huyó!", ephemeral=False)
+                await interaction.response.send_message(f"❌ The {self.dino_name} rejects {food}. It fled!", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
         except Exception: pass
 
-    @discord.ui.button(label="Carne Cruda 🥩", style=discord.ButtonStyle.danger, custom_id="tm_meat")
-    async def meat(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Carne")
+    @discord.ui.button(label="Raw Meat 🥩", style=discord.ButtonStyle.danger, custom_id="tm_meat")
+    async def meat(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Raw Meat")
     @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary, custom_id="tm_berry")
-    async def berries(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Bayas")
+    async def berries(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Mejoberries")
 
 # 3. ARK: CRAFTING
 class ArkCraftView(discord.ui.View):
@@ -441,31 +438,31 @@ class ArkCraftView(discord.ui.View):
         try:
             if mat_clicked == self.correct_mat:
                 add_points_to_user(interaction.user.id, 150)
-                await interaction.response.send_message(f"🔨 **¡Correcto!** {interaction.user.mention} fabricó el objeto (+150 pts).", ephemeral=False)
+                await interaction.response.send_message(f"🔨 **Correct!** {interaction.user.mention} crafted the item (+150 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                await interaction.response.send_message("❌ Material incorrecto. Se rompió.", ephemeral=False)
+                await interaction.response.send_message("❌ Wrong material. It broke.", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
         except Exception: pass
 
-    @discord.ui.button(label="Metal / Lingotes", style=discord.ButtonStyle.secondary, custom_id="cr_metal")
+    @discord.ui.button(label="Metal / Ingots", style=discord.ButtonStyle.secondary, custom_id="cr_metal")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Metal")
-    @discord.ui.button(label="Piedra / Madera / Sílex", style=discord.ButtonStyle.secondary, custom_id="cr_stone")
-    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Piedra/Madera")
-    @discord.ui.button(label="Piel / Fibra / Paja", style=discord.ButtonStyle.secondary, custom_id="cr_hide")
-    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Piel/Fibra")
-    @discord.ui.button(label="Electrónica / Polímero / Pólvora", style=discord.ButtonStyle.success, custom_id="cr_adv")
-    async def b4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Avanzado")
+    @discord.ui.button(label="Stone / Wood / Flint", style=discord.ButtonStyle.secondary, custom_id="cr_stone")
+    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Stone/Wood")
+    @discord.ui.button(label="Hide / Fiber / Thatch", style=discord.ButtonStyle.secondary, custom_id="cr_hide")
+    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Hide/Fiber")
+    @discord.ui.button(label="Electronics / Polymer / Gunpowder", style=discord.ButtonStyle.success, custom_id="cr_adv")
+    async def b4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Advanced")
 
-# 4. ARK: IMPRONTA
+# 4. ARK: IMPRINTING
 class ArkImprintView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        self.needs = random.choice(["Mimos", "Paseo", "Comida"])
+        self.needs = random.choice(["Cuddle", "Walk", "Feed"])
         self.grabbed = False
     
     async def check(self, interaction: discord.Interaction, action: str):
@@ -475,28 +472,28 @@ class ArkImprintView(discord.ui.View):
         try:
             if action == self.needs:
                 add_points_to_user(interaction.user.id, 300)
-                await interaction.response.send_message(f"❤️ **¡Impronta subida!** {interaction.user.mention} acertó (+300 pts).", ephemeral=False)
+                await interaction.response.send_message(f"❤️ **Imprinting increased!** {interaction.user.mention} got it right (+300 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                await interaction.response.send_message(f"😭 El bebé quería **{self.needs}**. ¡Se enfadó y se fue!", ephemeral=False)
+                await interaction.response.send_message(f"😭 The baby wanted **{self.needs}**. It got angry and left!", ephemeral=False)
                 embed = interaction.message.embeds[0]
                 embed.color = discord.Color.red()
-                embed.title = "Crianza FALLIDA"
+                embed.title = "Rearing FAILED"
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(embed=embed, view=self)
                 self.stop()
         except Exception: pass
 
-    @discord.ui.button(label="Dar Mimos 🧸", style=discord.ButtonStyle.primary, custom_id="imp_cud")
-    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Mimos")
-    @discord.ui.button(label="Pasear 🚶", style=discord.ButtonStyle.success, custom_id="imp_wlk")
-    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Paseo")
-    @discord.ui.button(label="Alimentar 🍖", style=discord.ButtonStyle.danger, custom_id="imp_fed")
-    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Comida")
+    @discord.ui.button(label="Cuddle 🧸", style=discord.ButtonStyle.primary, custom_id="imp_cud")
+    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Cuddle")
+    @discord.ui.button(label="Walk 🚶", style=discord.ButtonStyle.success, custom_id="imp_wlk")
+    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Walk")
+    @discord.ui.button(label="Feed 🍖", style=discord.ButtonStyle.danger, custom_id="imp_fed")
+    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Feed")
 
-# 5. ARK: ALPHA HUNT (NIVELES Y PENALIZACIÓN)
+# 5. ARK: ALPHA HUNT
 class ArkAlphaView(discord.ui.View):
     def __init__(self, win, loss, chance): 
         super().__init__(timeout=None)
@@ -505,7 +502,7 @@ class ArkAlphaView(discord.ui.View):
         self.chance = chance
         self.grabbed = False
 
-    @discord.ui.button(label="🗡️ ATACAR ALPHA", style=discord.ButtonStyle.danger, custom_id="alpha_atk")
+    @discord.ui.button(label="🗡️ ATTACK ALPHA", style=discord.ButtonStyle.danger, custom_id="alpha_atk")
     async def attack(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.grabbed: return
         self.grabbed = True
@@ -513,10 +510,10 @@ class ArkAlphaView(discord.ui.View):
         try:
             if random.random() < self.chance: 
                 add_points_to_user(interaction.user.id, self.win)
-                await interaction.response.send_message(f"🏆 **¡VICTORIA!** {interaction.user.mention} mató al Alpha (+{self.win} pts).", ephemeral=False)
+                await interaction.response.send_message(f"🏆 **VICTORY!** {interaction.user.mention} killed the Alpha (+{self.win} pts).", ephemeral=False)
             else: 
                 remove_points_from_user(interaction.user.id, self.loss)
-                await interaction.response.send_message(f"💀 **MUERTE...** {interaction.user.mention} murió y perdió **{self.loss} puntos**.", ephemeral=False)
+                await interaction.response.send_message(f"💀 **DEATH...** {interaction.user.mention} died and lost **{self.loss} points**.", ephemeral=False)
             
             button.disabled = True
             await interaction.message.edit(view=self)
@@ -538,33 +535,34 @@ class PokemonVisualView(discord.ui.View):
         try:
             if type_guess == self.correct_type:
                 add_points_to_user(interaction.user.id, 150)
-                await interaction.response.send_message(f"✅ **¡Correcto!** {interaction.user.mention} acertó (+150 pts).", ephemeral=False)
+                await interaction.response.send_message(f"✅ **Correct!** {interaction.user.mention} got it right (+150 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                await interaction.response.send_message(f"❌ Incorrecto. Era {self.correct_type}.", ephemeral=False)
+                await interaction.response.send_message(f"❌ Incorrect. It was {self.correct_type}.", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
         except Exception: pass
 
-    @discord.ui.button(label="Fuego 🔥", style=discord.ButtonStyle.danger, custom_id="pk_fir")
-    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Fuego")
-    @discord.ui.button(label="Agua 💧", style=discord.ButtonStyle.primary, custom_id="pk_wat")
-    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Agua")
-    @discord.ui.button(label="Planta 🌿", style=discord.ButtonStyle.success, custom_id="pk_gra")
-    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Planta")
+    @discord.ui.button(label="Fire 🔥", style=discord.ButtonStyle.danger, custom_id="pk_fir")
+    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Fire")
+    @discord.ui.button(label="Water 💧", style=discord.ButtonStyle.primary, custom_id="pk_wat")
+    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Water")
+    @discord.ui.button(label="Grass 🌿", style=discord.ButtonStyle.success, custom_id="pk_gra")
+    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Grass")
 
 # ==========================================
-# 🔄 SISTEMA AUTOMÁTICO (LOOP CON LIMPIEZA)
+# 🔄 AUTOMATIC SYSTEM (ENGLISH LOOP)
 # ==========================================
 
 async def spawn_game(channel):
     game_type = random.randint(1, 6)
+    view = None
     
     if game_type == 1: # Drop
-        embed = discord.Embed(title="¡SUMINISTRO ROJO CAYENDO!", description="Contiene loot de alto nivel. ¡Reclámalo rápido!", color=discord.Color.red())
+        embed = discord.Embed(title="RED SUPPLY DROP INCOMING!", description="Contains high-level loot. Claim it fast!", color=discord.Color.red())
         embed.set_image(url=IMG_ARK_DROP)
         view = ArkDropView()
         msg = await channel.send(embed=embed, view=view)
@@ -572,7 +570,7 @@ async def spawn_game(channel):
 
     elif game_type == 2: # Tame
         data = random.choice(DATA_TAMING)
-        embed = discord.Embed(title="¡Dino Inconsciente!", description=f"¿Qué come este **{data['name']}** para ser tameado?", color=discord.Color.green())
+        embed = discord.Embed(title="Unconscious Dino!", description=f"What does this **{data['name']}** eat to be tamed?", color=discord.Color.green())
         embed.set_image(url=data["url"])
         view = ArkTameView(data["food"], data["name"])
         msg = await channel.send(embed=embed, view=view)
@@ -580,7 +578,7 @@ async def spawn_game(channel):
 
     elif game_type == 3: # Craft
         data = random.choice(DATA_CRAFTING)
-        embed = discord.Embed(title="Mesa de Crafteo", description=f"¿Cuál es el material principal para: **{data['name']}**?", color=discord.Color.orange())
+        embed = discord.Embed(title="Crafting Table", description=f"What is the main material for: **{data['name']}**?", color=discord.Color.orange())
         embed.set_image(url=data["url"])
         view = ArkCraftView(data["mat"])
         msg = await channel.send(embed=embed, view=view)
@@ -588,15 +586,15 @@ async def spawn_game(channel):
 
     elif game_type == 4: # Imprint
         img = random.choice(DATA_BREEDING_IMGS)
-        embed = discord.Embed(title="Crianza de Bebé", description="El bebé llora. **Adivina qué cuidado necesita.**", color=discord.Color.purple())
+        embed = discord.Embed(title="Baby Rearing", description="The baby is crying. **Guess what care it needs.**", color=discord.Color.purple())
         embed.set_image(url=img)
         view = ArkImprintView()
         msg = await channel.send(embed=embed, view=view)
         return msg
 
-    elif game_type == 5: # Alpha (POR NIVELES)
+    elif game_type == 5: # Alpha (LEVELS)
         data = random.choice(DATA_ALPHAS)
-        embed = discord.Embed(title=f"⚠️ {data['name']} DETECTADO", description=f"¿Te arriesgas a atacarlo?\n\n🟢 **Recompensa:** +{data['win']} Puntos\n🔴 **Riesgo:** -{data['loss']} Puntos\n🎲 **Probabilidad:** {int(data['chance']*100)}%", color=data['color'])
+        embed = discord.Embed(title=f"⚠️ {data['name'].upper()} DETECTED", description=f"Do you risk attacking it?\n\n🟢 **Reward:** +{data['win']} Points\n🔴 **Risk:** -{data['loss']} Points\n🎲 **Win Chance:** {int(data['chance']*100)}%", color=data['color'])
         embed.set_image(url=data["url"])
         view = ArkAlphaView(data["win"], data["loss"], data["chance"])
         msg = await channel.send(embed=embed, view=view)
@@ -604,7 +602,7 @@ async def spawn_game(channel):
 
     elif game_type == 6: # Pokemon
         data = random.choice(DATA_POKEMON)
-        embed = discord.Embed(title="¿Qué tipo es este Pokémon?", description=f"Adivina el tipo de **{data['name']}**.", color=discord.Color.gold())
+        embed = discord.Embed(title="What type is this Pokémon?", description=f"Guess the type of **{data['name']}**.", color=discord.Color.gold())
         embed.set_image(url=data["url"])
         view = PokemonVisualView(data["type"], data["name"])
         msg = await channel.send(embed=embed, view=view)
@@ -619,22 +617,21 @@ async def minigames_auto_loop():
         channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
         if not channel: return
         
-        # 1. ELIMINAR JUEGO ANTERIOR (Si existe y nadie jugó)
+        # 1. DELETE PREVIOUS GAME (Disable buttons)
         if last_minigame_message:
             try:
-                # Al poner view=None, los botones desaparecen y ya no se puede jugar
                 await last_minigame_message.edit(view=None)
             except:
                 pass 
 
-        # 2. ENVIAR NUEVO JUEGO
+        # 2. SEND NEW GAME
         last_minigame_message = await spawn_game(channel)
         
     except Exception as e:
         print(f"Error Minigame Loop: {e}")
 
 # ==========================================
-# 🏦 SISTEMA VAULT
+# 🏦 VAULT SYSTEM (ENGLISH)
 # ==========================================
 class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
@@ -706,15 +703,15 @@ class RolesView(discord.ui.View):
         for l, r in ROLES_CONFIG.items(): self.add_item(RoleButton(l, r))
 
 # ==========================================
-# ⚡ COMANDOS
+# ⚡ COMMANDS
 # ==========================================
-@bot.tree.command(name="add_points", description="ADMIN")
+@bot.tree.command(name="add_points", description="ADMIN: Add points")
 async def add_points(interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
     if not interaction.user.guild_permissions.administrator: return
     nb = add_points_to_user(usuario.id, cantidad)
     await interaction.response.send_message(f"✅ {usuario.mention} +{cantidad} (Total: {nb})")
 
-@bot.tree.command(name="remove_points", description="ADMIN")
+@bot.tree.command(name="remove_points", description="ADMIN: Remove points")
 async def remove_points(interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
     if not interaction.user.guild_permissions.administrator: return
     remove_points_from_user(usuario.id, cantidad)
@@ -723,7 +720,7 @@ async def remove_points(interaction: discord.Interaction, usuario: discord.Membe
 @bot.command(name="points")
 async def check_points(ctx):
     bal = get_user_points(ctx.author.id)
-    msg = await ctx.send(f"💰 {ctx.author.mention}: **{bal}** Puntos.")
+    msg = await ctx.send(f"💰 {ctx.author.mention}: **{bal}** Points.")
     try: 
         await ctx.message.delete()
         await asyncio.sleep(10)
@@ -732,7 +729,7 @@ async def check_points(ctx):
 
 @bot.command(name="recipes")
 async def show_recipes(ctx):
-    await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Imagen de crafteos aquí)*")
+    await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Recipes image here)*")
 
 @bot.tree.command(name="event_vault")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
@@ -759,7 +756,7 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     await msg.add_reaction("🎉")
 
 # ==========================================
-# 🛡️ EVENTOS
+# 🛡️ EVENTS
 # ==========================================
 @bot.event
 async def on_ready():
@@ -767,15 +764,15 @@ async def on_ready():
     try: await bot.tree.sync()
     except: pass
     
-    # Iniciar Loops
+    # Start Loops
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
     
-    # Recuperar Vistas
+    # Recover Views
     bot.add_view(RolesView())
     bot.add_view(VaultView())
 
-    # Setup Comandos (Limpio)
+    # Setup Commands (Clean)
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
         async for m in c_ch.history(limit=5):
