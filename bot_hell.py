@@ -8,6 +8,7 @@ import threading
 import re
 import time
 import json
+import traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -18,7 +19,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"HELL SYSTEM ACTIVE")
-    
     def do_HEAD(self):
         self.send_response(200)
         self.end_headers()
@@ -31,11 +31,11 @@ def run_fake_server():
 threading.Thread(target=run_fake_server, daemon=True).start()
 
 # ==========================================
-# 🔐 CONFIGURACIÓN GENERAL
+# 🔐 CONFIGURACIÓN
 # ==========================================
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
-# --- IDs DE CANALES ---
+# IDs CANALES
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
@@ -48,13 +48,10 @@ MINIGAMES_CHANNEL_ID = 1450244729848598618
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATOS DE MINIJUEGOS (IMÁGENES Y RESPUESTAS)
+# 🖼️ DATOS (IMÁGENES Y CONFIGURACIÓN)
 # ==========================================
-
-# 1. DROP ROJO
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
-# 2. DATA TAMEO
 DATA_TAMING = [
     {"url": "https://ark.wiki.gg/images/e/e6/Raptor.png", "food": "Carne", "name": "Raptor"},
     {"url": "https://ark.wiki.gg/images/0/03/Rex.png", "food": "Carne", "name": "T-Rex"},
@@ -78,7 +75,6 @@ DATA_TAMING = [
     {"url": "https://ark.wiki.gg/images/3/36/Phiomia.png", "food": "Bayas", "name": "Phiomia"},
 ]
 
-# 3. DATA CRAFTING
 DATA_CRAFTING = [
     {"url": "https://ark.wiki.gg/images/9/9a/Metal_Ingot.png", "mat": "Metal", "name": "Lingote de Metal"},
     {"url": "https://ark.wiki.gg/images/3/30/Flak_Chestpiece.png", "mat": "Metal", "name": "Pechera de Metal"},
@@ -102,7 +98,6 @@ DATA_CRAFTING = [
     {"url": "https://ark.wiki.gg/images/3/37/Advanced_Rifle_Bullet.png", "mat": "Avanzado", "name": "Bala de Rifle Avanzado"},
 ]
 
-# 4. DATA CRIANZA (Imágenes de Huevos)
 DATA_BREEDING_IMGS = [
     "https://ark.wiki.gg/images/e/e3/Fertilized_Rex_Egg.png",
     "https://ark.wiki.gg/images/5/5d/Fertilized_Giganotosaurus_Egg.png",
@@ -126,23 +121,26 @@ DATA_BREEDING_IMGS = [
     "https://ark.wiki.gg/images/3/39/Fertilized_Magmasaur_Egg.png"
 ]
 
-# 5. DATA ALPHA HUNT
-DATA_ALPHA_IMGS = [
-    "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png",
-    "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png",
-    "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png",
-    "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png",
-    "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png",
-    "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png",
-    "https://ark.wiki.gg/images/4/40/Alpha_Leedsichthys.png",
-    "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png",
-    "https://ark.wiki.gg/images/9/91/Alpha_Deathworm.png",
-    "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png",
-    "https://ark.wiki.gg/images/c/c6/Alpha_Karkinos.png",
-    "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png"
+# === NUEVA CONFIGURACIÓN ALPHA POR NIVELES ===
+DATA_ALPHAS = [
+    # Nivel FÁCIL (70% win, 300 pts)
+    {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 300, "loss": 300, "chance": 0.70, "color": discord.Color.green()},
+    {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 300, "loss": 300, "chance": 0.70, "color": discord.Color.green()},
+    
+    # Nivel NORMAL (50% win, 600 pts)
+    {"url": "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png", "name": "Alpha T-Rex", "win": 600, "loss": 600, "chance": 0.50, "color": discord.Color.gold()},
+    {"url": "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png", "name": "Alpha Megalodon", "win": 600, "loss": 600, "chance": 0.50, "color": discord.Color.gold()},
+    
+    # Nivel DIFÍCIL (40% win, 1200 pts)
+    {"url": "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png", "name": "Alpha Wyvern", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
+    {"url": "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png", "name": "Alpha Basilisk", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
+    {"url": "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png", "name": "Alpha Reaper", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
+
+    # Nivel EXTREMO (30% win, 2500 pts)
+    {"url": "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png", "name": "Alpha Mosasaur", "win": 2500, "loss": 2500, "chance": 0.30, "color": discord.Color.purple()},
+    {"url": "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png", "name": "Alpha Tusoteuthis", "win": 2500, "loss": 2500, "chance": 0.30, "color": discord.Color.purple()},
 ]
 
-# 6. DATA POKÉMON
 DATA_POKEMON = [
     {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", "type": "Fuego", "name": "Charizard"},
     {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/59.png", "type": "Fuego", "name": "Arcanine"},
@@ -166,9 +164,6 @@ DATA_POKEMON = [
     {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/251.png", "type": "Planta", "name": "Celebi"},
 ]
 
-# ==========================================
-# OTHER CONFIGS (Roles, Emojis, Shop, etc.)
-# ==========================================
 ROLES_CONFIG = {
     "Ping": 1199101577127014541,
     "Wipes": 1210709945339875328,
@@ -194,7 +189,6 @@ NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
-
 EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
 EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
 
@@ -221,7 +215,7 @@ ARK_DINOS = [
     "Troodon", "Wyvern", "Yutyrannus", "Velonasaur", "Snow Owl", "Managarmr"
 ]
 
-# --- ESTADOS ---
+# --- ESTADOS (GLOBALES) ---
 vault_state = {
     "active": False,
     "code": None,
@@ -230,13 +224,11 @@ vault_state = {
     "hints_task": None
 }
 user_cooldowns = {} 
-dino_game_state = {
-    "active": False,
-    "current_dino": None,
-    "message_id": None
-}
 
-# --- SISTEMA DE PUNTOS (JSON) ---
+# VARIABLES PARA CONTROLAR ÚLTIMO JUEGO ACTIVO
+last_minigame_message = None 
+
+# --- SISTEMA DE PUNTOS ---
 POINTS_FILE = "points.json"
 
 def load_points():
@@ -263,8 +255,10 @@ def remove_points_from_user(user_id, amount):
     data = load_points()
     uid = str(user_id)
     if uid not in data: data[uid] = 0
-    if data[uid] < amount: return False
-    data[uid] -= amount
+    if data[uid] < amount: 
+        data[uid] = 0 
+    else:
+        data[uid] -= amount
     save_points(data)
     return True
 
@@ -273,7 +267,7 @@ def get_user_points(user_id):
     return data.get(str(user_id), 0)
 
 # ==========================================
-# ⚙️ SETUP
+# ⚙️ SETUP BOT
 # ==========================================
 intents = discord.Intents.default()
 intents.members = True
@@ -288,471 +282,449 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # ==========================================
 
 class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
-    answer_input = discord.ui.TextInput(
-        label="Dino Name",
-        placeholder="Enter the correct name...",
-        required=True
-    )
+    answer_input = discord.ui.TextInput(label="Dino Name", placeholder="Enter name...", required=True)
+
+    def __init__(self, correct_answer):
+        super().__init__()
+        self.correct_answer = correct_answer
+        self.view_ref = None
 
     async def on_submit(self, interaction: discord.Interaction):
-        if not dino_game_state["active"]:
-            try: await interaction.response.send_message("❌ Too late! The round is over.", ephemeral=True)
-            except: pass
-            return
-
         guess = self.answer_input.value.strip().lower()
-        correct = dino_game_state["current_dino"].lower()
+        
+        # Anti-Doble Click Logic (Si alguien ya ganó, el juego se cierra antes)
+        if self.view_ref and self.view_ref.grabbed:
+             await interaction.response.send_message("❌ Alguien fue más rápido.", ephemeral=True)
+             return
 
-        if guess == correct:
-            dino_game_state["active"] = False 
+        if guess == self.correct_answer.lower():
+            if self.view_ref: self.view_ref.grabbed = True # Bloqueo global
+            
             points_won = 150 
             add_points_to_user(interaction.user.id, points_won)
-
             try: await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
             except: pass
 
             embed = discord.Embed(color=0x00FF00)
             embed.description = (
                 f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
-                f"{EMOJI_ANSWER} **ANSWER:** `{dino_game_state['current_dino']}`\n"
+                f"{EMOJI_ANSWER} **ANSWER:** `{self.correct_answer}`\n"
                 f"{EMOJI_POINTS} **POINTS:** +{points_won}"
             )
             embed.set_footer(text="Hell System • Dino Games")
-            
-            channel = bot.get_channel(DINO_CHANNEL_ID)
-            if channel:
-                await channel.send(embed=embed)
+            if interaction.channel: await interaction.channel.send(embed=embed)
             
             try:
-                msg = await channel.fetch_message(dino_game_state["message_id"])
-                await msg.edit(view=None)
+                view = self.view_ref 
+                for child in view.children: child.disabled = True
+                await interaction.message.edit(view=view)
             except: pass
-
         else:
             try: await interaction.response.send_message(f"❌ **WRONG!** Try again.", ephemeral=True)
             except: pass
 
 class DinoView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, correct_dino):
         super().__init__(timeout=None)
+        self.correct_dino = correct_dino
+        self.grabbed = False # Candado
 
-    @discord.ui.button(label="GUESS THE DINO", style=discord.ButtonStyle.primary, emoji="❓", custom_id="dino_guess_btn")
+    @discord.ui.button(label="GUESS THE DINO", style=discord.ButtonStyle.primary, emoji="❓", custom_id="dino_guess_btn_v2")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not dino_game_state["active"]:
-            try: await interaction.response.send_message("❌ Round ended.", ephemeral=True)
-            except: pass
+        if self.grabbed:
+            await interaction.response.send_message("❌ Round ended.", ephemeral=True)
             return
-        await interaction.response.send_modal(DinoModal())
+        modal = DinoModal(self.correct_dino)
+        modal.view_ref = self 
+        await interaction.response.send_modal(modal)
 
 @tasks.loop(minutes=20)
 async def dino_game_loop():
-    channel = bot.get_channel(DINO_CHANNEL_ID)
-    if not channel: return
+    if not bot.is_ready(): return
 
-    if dino_game_state["active"]:
-        fail_embed = discord.Embed(description=f"⏰ **TIME'S UP!** Nobody guessed correctly.\n{EMOJI_ANSWER} The answer was: **{dino_game_state['current_dino']}**", color=0xFF0000)
-        fail_embed.set_footer(text="Hell System • Dino Games")
-        await channel.send(embed=fail_embed)
-        try:
-            old_msg = await channel.fetch_message(dino_game_state["message_id"])
-            await old_msg.edit(view=None)
-        except: pass
+    try:
+        channel = bot.get_channel(DINO_CHANNEL_ID)
+        if not channel: return
 
-    dino_real_name = random.choice(ARK_DINOS)
-    char_list = list(dino_real_name.upper())
-    random.shuffle(char_list)
-    scrambled_name = "".join(char_list)
-    
-    while scrambled_name == dino_real_name.upper():
+        dino_real_name = random.choice(ARK_DINOS)
+        char_list = list(dino_real_name.upper())
         random.shuffle(char_list)
         scrambled_name = "".join(char_list)
+        
+        while scrambled_name == dino_real_name.upper():
+            random.shuffle(char_list)
+            scrambled_name = "".join(char_list)
 
-    embed = discord.Embed(title=f"{EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
-    embed.description = (
-        f"Unscramble the name of this creature!\n\n"
-        f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
-        f"Click the button to answer. You have **20 minutes**!"
-    )
-    embed.set_footer(text="Hell System • Dino Games")
+        embed = discord.Embed(title=f"{EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
+        embed.description = (
+            f"Unscramble the name of this creature!\n\n"
+            f"🧩 **SCRAMBLED:** `{scrambled_name}`\n\n"
+            f"Click the button to answer."
+        )
+        embed.set_footer(text="Hell System • Dino Games")
+        view = DinoView(correct_dino=dino_real_name)
+        await channel.send(embed=embed, view=view)
 
-    view = DinoView()
-    msg = await channel.send(embed=embed, view=view)
-
-    dino_game_state["active"] = True
-    dino_game_state["current_dino"] = dino_real_name
-    dino_game_state["message_id"] = msg.id
+    except Exception as e:
+        print(f"Error en Dino Loop: {e}")
 
 # ==========================================
-# 🎮 CLASES MINIGAMES (Lógica de Botones)
+# 🎮 CLASES MINIGAMES (Lógica BLINDADA)
 # ==========================================
 
 # 1. ARK: DROP ROJO
 class ArkDropView(discord.ui.View):
-    def __init__(self):
+    def __init__(self): 
         super().__init__(timeout=None)
-
+        self.grabbed = False
+        
     @discord.ui.button(label="CLAIM DROP", style=discord.ButtonStyle.danger, emoji="🎁", custom_id="drop_claim_btn")
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
-        button.label = f"Loot de {interaction.user.name}"
-        button.style = discord.ButtonStyle.secondary
-        button.disabled = True
-        add_points_to_user(interaction.user.id, 500)
-        embed = interaction.message.embeds[0]
-        embed.color = discord.Color.dark_grey()
-        embed.set_footer(text=f"Reclamado por: {interaction.user.display_name} (+500 Puntos)")
+        if self.grabbed: return # Si ya se pulsó, ignorar
+        self.grabbed = True
+        
         try:
+            button.label = f"Loot de {interaction.user.name}"
+            button.style = discord.ButtonStyle.secondary
+            button.disabled = True
+            add_points_to_user(interaction.user.id, 500)
+            embed = interaction.message.embeds[0]
+            embed.color = discord.Color.dark_grey()
+            embed.set_footer(text=f"Reclamado por: {interaction.user.display_name} (+500 Puntos)")
             await interaction.response.edit_message(embed=embed, view=self)
             await interaction.followup.send(f"🔴 **{interaction.user.mention}** abrió el Drop Rojo y ganó 500 puntos!", ephemeral=False)
             self.stop()
-        except discord.NotFound: pass
+        except Exception: pass
 
-# 2. ARK: TAMEO (Dinámico)
+# 2. ARK: TAMEO
 class ArkTameView(discord.ui.View):
     def __init__(self, correct_food, dino_name):
         super().__init__(timeout=None)
         self.correct_food = correct_food
         self.dino_name = dino_name
-
+        self.grabbed = False
+    
     async def feed(self, interaction: discord.Interaction, food: str):
+        if self.grabbed: return
+        self.grabbed = True
+        
         try:
             if food == self.correct_food:
                 add_points_to_user(interaction.user.id, 200)
-                await interaction.response.send_message(f"🦕 **¡TAMEADO!** {interaction.user.mention} le dio {food} al {self.dino_name} y ganó 200 puntos.", ephemeral=False)
+                await interaction.response.send_message(f"🦕 **¡TAMEADO!** {interaction.user.mention} le dio {food} al {self.dino_name} (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                # Fallo: Cerramos el evento para todos (evitar trampa)
-                await interaction.response.send_message(f"❌ El {self.dino_name} rechaza {food}. ¡El dino huyó!", ephemeral=False)
+                await interaction.response.send_message(f"❌ El {self.dino_name} rechaza {food}. ¡Huyó!", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
-        except discord.NotFound: pass
+        except Exception: pass
 
-    @discord.ui.button(label="Carne Cruda 🥩", style=discord.ButtonStyle.danger, custom_id="tame_meat")
-    async def meat(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.feed(interaction, "Carne")
-    @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary, custom_id="tame_berry")
-    async def berries(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.feed(interaction, "Bayas")
+    @discord.ui.button(label="Carne Cruda 🥩", style=discord.ButtonStyle.danger, custom_id="tm_meat")
+    async def meat(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Carne")
+    @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary, custom_id="tm_berry")
+    async def berries(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Bayas")
 
-# 3. ARK: CRAFTING (Dinámico)
+# 3. ARK: CRAFTING
 class ArkCraftView(discord.ui.View):
     def __init__(self, correct_mat):
         super().__init__(timeout=None)
         self.correct_mat = correct_mat
-
+        self.grabbed = False
+    
     async def check_mat(self, interaction: discord.Interaction, mat_clicked: str):
+        if self.grabbed: return
+        self.grabbed = True
+        
         try:
             if mat_clicked == self.correct_mat:
                 add_points_to_user(interaction.user.id, 150)
-                await interaction.response.send_message(f"🔨 **¡Correcto!** {interaction.user.mention} usó los materiales correctos (+150 Puntos).", ephemeral=False)
+                await interaction.response.send_message(f"🔨 **¡Correcto!** {interaction.user.mention} fabricó el objeto (+150 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                await interaction.response.send_message("❌ Material incorrecto. Se rompió el crafteo.", ephemeral=False)
+                await interaction.response.send_message("❌ Material incorrecto. Se rompió.", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
-        except discord.NotFound: pass
+        except Exception: pass
 
-    @discord.ui.button(label="Metal / Lingotes", style=discord.ButtonStyle.secondary, custom_id="craft_metal")
-    async def btn_metal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check_mat(interaction, "Metal")
-    @discord.ui.button(label="Piedra / Madera / Sílex", style=discord.ButtonStyle.secondary, custom_id="craft_stone")
-    async def btn_stone(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check_mat(interaction, "Piedra/Madera")
-    @discord.ui.button(label="Piel / Fibra / Paja", style=discord.ButtonStyle.secondary, custom_id="craft_hide")
-    async def btn_hide(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check_mat(interaction, "Piel/Fibra")
-    @discord.ui.button(label="Electrónica / Polímero / Pólvora", style=discord.ButtonStyle.success, custom_id="craft_adv")
-    async def btn_adv(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check_mat(interaction, "Avanzado")
+    @discord.ui.button(label="Metal / Lingotes", style=discord.ButtonStyle.secondary, custom_id="cr_metal")
+    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Metal")
+    @discord.ui.button(label="Piedra / Madera / Sílex", style=discord.ButtonStyle.secondary, custom_id="cr_stone")
+    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Piedra/Madera")
+    @discord.ui.button(label="Piel / Fibra / Paja", style=discord.ButtonStyle.secondary, custom_id="cr_hide")
+    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Piel/Fibra")
+    @discord.ui.button(label="Electrónica / Polímero / Pólvora", style=discord.ButtonStyle.success, custom_id="cr_adv")
+    async def b4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Avanzado")
 
-# 4. ARK: IMPRONTA (ANTI-CHEAT)
+# 4. ARK: IMPRONTA
 class ArkImprintView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.needs = random.choice(["Mimos", "Paseo", "Comida"])
-
+        self.grabbed = False
+    
     async def check(self, interaction: discord.Interaction, action: str):
+        if self.grabbed: return
+        self.grabbed = True
+        
         try:
             if action == self.needs:
                 add_points_to_user(interaction.user.id, 300)
-                await interaction.response.send_message(f"❤️ **¡Impronta subida!** {interaction.user.mention} acertó y ganó 300 puntos.", ephemeral=False)
+                await interaction.response.send_message(f"❤️ **¡Impronta subida!** {interaction.user.mention} acertó (+300 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                # SI FALLA: Se bloquean botones para TODOS.
-                await interaction.response.send_message(f"😭 El bebé no quería eso... Quería **{self.needs}**. ¡Se enfadó!", ephemeral=False)
+                await interaction.response.send_message(f"😭 El bebé quería **{self.needs}**. ¡Se enfadó y se fue!", ephemeral=False)
                 embed = interaction.message.embeds[0]
-                embed.title = "Crianza FALLIDA"
                 embed.color = discord.Color.red()
+                embed.title = "Crianza FALLIDA"
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(embed=embed, view=self)
                 self.stop()
-        except discord.NotFound: pass
+        except Exception: pass
 
-    @discord.ui.button(label="Dar Mimos 🧸", style=discord.ButtonStyle.primary, custom_id="imp_cuddle")
-    async def cuddle(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check(interaction, "Mimos")
-    @discord.ui.button(label="Pasear 🚶", style=discord.ButtonStyle.success, custom_id="imp_walk")
-    async def walk(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check(interaction, "Paseo")
-    @discord.ui.button(label="Alimentar 🍖", style=discord.ButtonStyle.danger, custom_id="imp_feed")
-    async def feed(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.check(interaction, "Comida")
+    @discord.ui.button(label="Dar Mimos 🧸", style=discord.ButtonStyle.primary, custom_id="imp_cud")
+    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Mimos")
+    @discord.ui.button(label="Pasear 🚶", style=discord.ButtonStyle.success, custom_id="imp_wlk")
+    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Paseo")
+    @discord.ui.button(label="Alimentar 🍖", style=discord.ButtonStyle.danger, custom_id="imp_fed")
+    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Comida")
 
-# 5. ARK: ALPHA HUNT
+# 5. ARK: ALPHA HUNT (NIVELES Y PENALIZACIÓN)
 class ArkAlphaView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, win, loss, chance): 
         super().__init__(timeout=None)
-        
+        self.win = win
+        self.loss = loss
+        self.chance = chance
+        self.grabbed = False
+
     @discord.ui.button(label="🗡️ ATACAR ALPHA", style=discord.ButtonStyle.danger, custom_id="alpha_atk")
     async def attack(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.grabbed: return
+        self.grabbed = True
+        
         try:
-            if random.random() < 0.5: # 50%
-                add_points_to_user(interaction.user.id, 1000)
-                await interaction.response.send_message(f"🏆 **¡VICTORIA ÉPICA!** {interaction.user.mention} mató al Alpha y ganó **1000 puntos**.", ephemeral=False)
-            else:
-                await interaction.response.send_message(f"💀 **MUERTE...** {interaction.user.mention} fue devorado.", ephemeral=False)
+            if random.random() < self.chance: 
+                add_points_to_user(interaction.user.id, self.win)
+                await interaction.response.send_message(f"🏆 **¡VICTORIA!** {interaction.user.mention} mató al Alpha (+{self.win} pts).", ephemeral=False)
+            else: 
+                remove_points_from_user(interaction.user.id, self.loss)
+                await interaction.response.send_message(f"💀 **MUERTE...** {interaction.user.mention} murió y perdió **{self.loss} puntos**.", ephemeral=False)
+            
             button.disabled = True
             await interaction.message.edit(view=self)
             self.stop()
-        except discord.NotFound: pass
+        except Exception: pass
 
-# 6. POKÉMON (Dinámico)
+# 6. POKÉMON
 class PokemonVisualView(discord.ui.View):
     def __init__(self, correct_type, poke_name):
         super().__init__(timeout=None)
         self.correct_type = correct_type
         self.poke_name = poke_name
-
+        self.grabbed = False
+    
     async def guess(self, interaction: discord.Interaction, type_guess: str):
+        if self.grabbed: return
+        self.grabbed = True
+        
         try:
             if type_guess == self.correct_type:
                 add_points_to_user(interaction.user.id, 150)
-                await interaction.response.send_message(f"✅ **¡Correcto!** {interaction.user.mention} acertó. {self.poke_name} es tipo {self.correct_type} (+150 Puntos).", ephemeral=False)
+                await interaction.response.send_message(f"✅ **¡Correcto!** {interaction.user.mention} acertó (+150 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
             else:
-                # Fallo = Cierre evento
-                await interaction.response.send_message(f"❌ Tipo incorrecto. ¡{self.poke_name} escapó!", ephemeral=False)
+                await interaction.response.send_message(f"❌ Incorrecto. Era {self.correct_type}.", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
-        except discord.NotFound: pass
+        except Exception: pass
 
-    @discord.ui.button(label="Fuego 🔥", style=discord.ButtonStyle.danger, custom_id="pk_fire")
-    async def fire(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.guess(interaction, "Fuego")
-    @discord.ui.button(label="Agua 💧", style=discord.ButtonStyle.primary, custom_id="pk_water")
-    async def water(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.guess(interaction, "Agua")
-    @discord.ui.button(label="Planta 🌿", style=discord.ButtonStyle.success, custom_id="pk_grass")
-    async def grass(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.guess(interaction, "Planta")
-
+    @discord.ui.button(label="Fuego 🔥", style=discord.ButtonStyle.danger, custom_id="pk_fir")
+    async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Fuego")
+    @discord.ui.button(label="Agua 💧", style=discord.ButtonStyle.primary, custom_id="pk_wat")
+    async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Agua")
+    @discord.ui.button(label="Planta 🌿", style=discord.ButtonStyle.success, custom_id="pk_gra")
+    async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Planta")
 
 # ==========================================
-# 🔄 SISTEMA AUTOMÁTICO (SPAWNERS CON FOTOS)
+# 🔄 SISTEMA AUTOMÁTICO (LOOP CON LIMPIEZA)
 # ==========================================
 
-async def spawn_drop(channel):
-    embed = discord.Embed(title="¡SUMINISTRO ROJO CAYENDO!", description="Contiene loot de alto nivel. ¡Reclámalo rápido!", color=discord.Color.red())
-    embed.set_image(url=IMG_ARK_DROP)
-    await channel.send(embed=embed, view=ArkDropView())
+async def spawn_game(channel):
+    game_type = random.randint(1, 6)
+    
+    if game_type == 1: # Drop
+        embed = discord.Embed(title="¡SUMINISTRO ROJO CAYENDO!", description="Contiene loot de alto nivel. ¡Reclámalo rápido!", color=discord.Color.red())
+        embed.set_image(url=IMG_ARK_DROP)
+        view = ArkDropView()
+        msg = await channel.send(embed=embed, view=view)
+        return msg
 
-async def spawn_tame(channel):
-    # Elegir datos aleatorios de la lista
-    data = random.choice(DATA_TAMING)
-    embed = discord.Embed(title="¡Dino Inconsciente!", description=f"¿Qué come este **{data['name']}** para ser tameado?", color=discord.Color.green())
-    embed.set_image(url=data["url"])
-    # Pasar los datos correctos a la View
-    await channel.send(embed=embed, view=ArkTameView(correct_food=data["food"], dino_name=data["name"]))
+    elif game_type == 2: # Tame
+        data = random.choice(DATA_TAMING)
+        embed = discord.Embed(title="¡Dino Inconsciente!", description=f"¿Qué come este **{data['name']}** para ser tameado?", color=discord.Color.green())
+        embed.set_image(url=data["url"])
+        view = ArkTameView(data["food"], data["name"])
+        msg = await channel.send(embed=embed, view=view)
+        return msg
 
-async def spawn_craft(channel):
-    data = random.choice(DATA_CRAFTING)
-    embed = discord.Embed(title="Mesa de Crafteo", description=f"¿Cuál es el material principal para fabricar: **{data['name']}**?", color=discord.Color.orange())
-    embed.set_image(url=data["url"])
-    await channel.send(embed=embed, view=ArkCraftView(correct_mat=data["mat"]))
+    elif game_type == 3: # Craft
+        data = random.choice(DATA_CRAFTING)
+        embed = discord.Embed(title="Mesa de Crafteo", description=f"¿Cuál es el material principal para: **{data['name']}**?", color=discord.Color.orange())
+        embed.set_image(url=data["url"])
+        view = ArkCraftView(data["mat"])
+        msg = await channel.send(embed=embed, view=view)
+        return msg
 
-async def spawn_imprint(channel):
-    # Aseguramos que elija una URL válida
-    img_url = random.choice(DATA_BREEDING_IMGS)
-    embed = discord.Embed(title="Crianza de Bebé", description="El bebé está llorando. **Intenta adivinar qué cuidado necesita.**", color=discord.Color.purple())
-    embed.set_image(url=img_url)
-    await channel.send(embed=embed, view=ArkImprintView())
+    elif game_type == 4: # Imprint
+        img = random.choice(DATA_BREEDING_IMGS)
+        embed = discord.Embed(title="Crianza de Bebé", description="El bebé llora. **Adivina qué cuidado necesita.**", color=discord.Color.purple())
+        embed.set_image(url=img)
+        view = ArkImprintView()
+        msg = await channel.send(embed=embed, view=view)
+        return msg
 
-async def spawn_alpha(channel):
-    img_url = random.choice(DATA_ALPHA_IMGS)
-    embed = discord.Embed(title="⚠️ ¡ALPHA DETECTADO!", description="¿Te arriesgas a atacarlo? (50% Ganar 1000 Pts / 50% Morir)", color=discord.Color.dark_red())
-    embed.set_image(url=img_url)
-    await channel.send(embed=embed, view=ArkAlphaView())
+    elif game_type == 5: # Alpha (POR NIVELES)
+        data = random.choice(DATA_ALPHAS)
+        embed = discord.Embed(title=f"⚠️ {data['name']} DETECTADO", description=f"¿Te arriesgas a atacarlo?\n\n🟢 **Recompensa:** +{data['win']} Puntos\n🔴 **Riesgo:** -{data['loss']} Puntos\n🎲 **Probabilidad:** {int(data['chance']*100)}%", color=data['color'])
+        embed.set_image(url=data["url"])
+        view = ArkAlphaView(data["win"], data["loss"], data["chance"])
+        msg = await channel.send(embed=embed, view=view)
+        return msg
 
-async def spawn_poke(channel):
-    data = random.choice(DATA_POKEMON)
-    embed = discord.Embed(title="¿Qué tipo es este Pokémon?", description=f"Adivina el tipo de **{data['name']}**.", color=discord.Color.gold())
-    embed.set_image(url=data["url"])
-    await channel.send(embed=embed, view=PokemonVisualView(correct_type=data["type"], poke_name=data["name"]))
+    elif game_type == 6: # Pokemon
+        data = random.choice(DATA_POKEMON)
+        embed = discord.Embed(title="¿Qué tipo es este Pokémon?", description=f"Adivina el tipo de **{data['name']}**.", color=discord.Color.gold())
+        embed.set_image(url=data["url"])
+        view = PokemonVisualView(data["type"], data["name"])
+        msg = await channel.send(embed=embed, view=view)
+        return msg
 
 @tasks.loop(minutes=5)
 async def minigames_auto_loop():
-    channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
-    if not channel:
-        return
-
-    # Lista de funciones para llamar
-    games = [spawn_drop, spawn_tame, spawn_craft, spawn_imprint, spawn_alpha, spawn_poke]
+    if not bot.is_ready(): return
+    global last_minigame_message
     
-    # Elegir uno al azar y ejecutarlo
-    selected_game = random.choice(games)
-    await selected_game(channel)
+    try:
+        channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
+        if not channel: return
+        
+        # 1. ELIMINAR JUEGO ANTERIOR (Si existe y nadie jugó)
+        if last_minigame_message:
+            try:
+                # Al poner view=None, los botones desaparecen y ya no se puede jugar
+                await last_minigame_message.edit(view=None)
+            except:
+                pass 
+
+        # 2. ENVIAR NUEVO JUEGO
+        last_minigame_message = await spawn_game(channel)
+        
+    except Exception as e:
+        print(f"Error Minigame Loop: {e}")
 
 # ==========================================
 # 🏦 SISTEMA VAULT
 # ==========================================
-
 class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
-
     async def on_submit(self, interaction: discord.Interaction):
         user_id = interaction.user.id
         current_time = time.time()
         if user_id in user_cooldowns:
-            elapsed = current_time - user_cooldowns[user_id]
-            remaining = 15 - elapsed
-            if remaining > 0:
-                try: await interaction.response.send_message(f"🚫 **SYSTEM LOCKED.** Wait **{int(remaining)}s** for reboot.", ephemeral=True)
-                except: pass
+            if (time.time() - user_cooldowns[user_id]) < 15:
+                await interaction.response.send_message(f"🚫 Wait...", ephemeral=True)
                 return
         user_cooldowns[user_id] = current_time
+        
         if not vault_state["active"]:
-            try: await interaction.response.send_message("❌ Connection lost. Event ended.", ephemeral=True)
-            except: pass
+            await interaction.response.send_message("❌ Event ended.", ephemeral=True)
             return
-        guess = self.code_input.value
-        if guess == vault_state["code"]:
+            
+        if self.code_input.value == vault_state["code"]:
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
+            add_points_to_user(interaction.user.id, 2000)
+            await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.**", ephemeral=True)
             
-            bonus_points = 2000
-            add_points_to_user(interaction.user.id, bonus_points)
-
-            try: await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.** Downloading loot...", ephemeral=True)
-            except: pass
-            
-            winner_embed = discord.Embed(
-                title="🎉 VAULT CRACKED! 🎉",
-                description=f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n{EMOJI_CODE} **CODE:** `{guess}`\n{EMOJI_REWARD} **LOOT:** {vault_state['prize']}\n{EMOJI_POINTS} **BONUS:** +{bonus_points}",
-                color=0xFFD700
-            )
-            winner_embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif") 
-            winner_embed.set_footer(text="HELL SYSTEM • Vault Event") 
-            channel = bot.get_channel(VAULT_CHANNEL_ID)
-            if channel: await channel.send(content=f"{interaction.user.mention} cracked the code!", embed=winner_embed)
-            try:
-                msg = await interaction.channel.fetch_message(vault_state["message_id"])
-                await msg.edit(view=None)
-            except: pass
+            embed = discord.Embed(title="🎉 VAULT CRACKED! 🎉", description=f"{EMOJI_WINNER} Winner: {interaction.user.mention}\nCode: `{vault_state['code']}`\nReward: {vault_state['prize']}", color=0xFFD700)
+            embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
+            if interaction.channel: await interaction.channel.send(embed=embed)
         else:
-            try: await interaction.response.send_message(f"⚠️ **ACCESS DENIED.** Invalid PIN.\n*Security protocol active: 15s timeout.*", ephemeral=True)
-            except: pass
+            await interaction.response.send_message(f"⚠️ **ACCESS DENIED.**", ephemeral=True)
 
 class VaultView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None) 
-    @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_open_btn")
+    def __init__(self): super().__init__(timeout=None)
+    @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_btn")
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not vault_state["active"]:
-            try: await interaction.response.send_message("❌ Target offline.", ephemeral=True)
-            except: pass
-            return
+        if not vault_state["active"]: return
         await interaction.response.send_modal(VaultModal())
 
 async def manage_vault_hints(channel, message, code):
     try:
-        await asyncio.sleep(18000) 
+        await asyncio.sleep(18000)
         if not vault_state["active"]: return
-        hint_2 = f"{code[:2]}##"
-        new_embed = message.embeds[0]
-        new_embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{hint_2}`", inline=True)
-        await message.edit(embed=new_embed)
-        await asyncio.sleep(68400) 
+        embed = message.embeds[0]
+        embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{code[:2]}##`", inline=True)
+        await message.edit(embed=embed)
+        await asyncio.sleep(68400)
         if not vault_state["active"]: return
-        hint_3 = f"{code[:3]}#"
-        new_embed = message.embeds[0]
-        new_embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{hint_3}`", inline=True)
-        await message.edit(embed=new_embed)
-    except asyncio.CancelledError: pass
+        embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{code[:3]}#`", inline=True)
+        await message.edit(embed=embed)
+    except: pass
 
 # ==========================================
 # 🔘 ROLES
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
-        super().__init__(
-            label=label, 
-            style=discord.ButtonStyle.secondary, 
-            custom_id=f"role_{role_id}"
-        )
+        super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
         self.role_id = role_id
-
     async def callback(self, interaction: discord.Interaction):
         role = interaction.guild.get_role(self.role_id)
-        if not role: return
-        try:
+        if role:
             if role in interaction.user.roles:
                 await interaction.user.remove_roles(role)
-                await interaction.response.send_message(f"➖ Removed **{role.name}**", ephemeral=True)
+                await interaction.response.send_message(f"➖ Removed {role.name}", ephemeral=True)
             else:
                 await interaction.user.add_roles(role)
-                await interaction.response.send_message(f"➕ Added **{role.name}**", ephemeral=True)
-        except: pass
+                await interaction.response.send_message(f"➕ Added {role.name}", ephemeral=True)
 
 class RolesView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        for label, role_id in ROLES_CONFIG.items():
-            self.add_item(RoleButton(label, role_id))
+        for l, r in ROLES_CONFIG.items(): self.add_item(RoleButton(l, r))
 
 # ==========================================
-# ⚡ COMANDOS ADMIN (SLASH /)
+# ⚡ COMANDOS
 # ==========================================
-
-@bot.tree.command(name="add_points", description="ADMIN: Añadir puntos a un usuario")
+@bot.tree.command(name="add_points", description="ADMIN")
 async def add_points(interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
-        return
-    
-    new_bal = add_points_to_user(usuario.id, cantidad)
-    await interaction.response.send_message(f"✅ Se añadieron **{cantidad}** {EMOJI_POINTS} a {usuario.mention}. Nuevo saldo: **{new_bal}**")
+    if not interaction.user.guild_permissions.administrator: return
+    nb = add_points_to_user(usuario.id, cantidad)
+    await interaction.response.send_message(f"✅ {usuario.mention} +{cantidad} (Total: {nb})")
 
-@bot.tree.command(name="remove_points", description="ADMIN: Quitar puntos a un usuario")
+@bot.tree.command(name="remove_points", description="ADMIN")
 async def remove_points(interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
-        return
-    
-    success = remove_points_from_user(usuario.id, cantidad)
-    if success:
-        new_bal = get_user_points(usuario.id)
-        await interaction.response.send_message(f"✅ Se retiraron **{cantidad}** {EMOJI_POINTS} a {usuario.mention}. Nuevo saldo: **{new_bal}**")
-    else:
-        await interaction.response.send_message(f"❌ El usuario no tiene suficientes puntos.", ephemeral=True)
-
-# ==========================================
-# ⚡ COMANDOS USUARIO (PREFIX !)
-# ==========================================
+    if not interaction.user.guild_permissions.administrator: return
+    remove_points_from_user(usuario.id, cantidad)
+    await interaction.response.send_message(f"✅ {usuario.mention} -{cantidad}")
 
 @bot.command(name="points")
 async def check_points(ctx):
     bal = get_user_points(ctx.author.id)
-    msg = await ctx.send(f"💰 {ctx.author.mention}, tienes **{bal}** {EMOJI_POINTS} Puntos.")
-    try:
+    msg = await ctx.send(f"💰 {ctx.author.mention}: **{bal}** Puntos.")
+    try: 
         await ctx.message.delete()
         await asyncio.sleep(10)
         await msg.delete()
@@ -760,270 +732,82 @@ async def check_points(ctx):
 
 @bot.command(name="recipes")
 async def show_recipes(ctx):
-    await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Aquí deberías poner la imagen o lista de crafteos)*")
+    await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Imagen de crafteos aquí)*")
 
-# ==========================================
-# ⚡ EVENTOS SLASH (ADMIN)
-# ==========================================
-
-@bot.tree.command(name="event_vault", description="Inicia el evento de la Caja Fuerte")
+@bot.tree.command(name="event_vault")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
-        return
-    if len(code) != 4 or not code.isdigit():
-        await interaction.response.send_message("❌ Código inválido.", ephemeral=True)
-        return
-    channel = bot.get_channel(VAULT_CHANNEL_ID)
-    if not channel:
-        await interaction.response.send_message("❌ Error ID Canal.", ephemeral=True)
-        return
+    if not interaction.user.guild_permissions.administrator: return
+    ch = bot.get_channel(VAULT_CHANNEL_ID)
+    if not ch: return
     await interaction.response.defer(ephemeral=True)
-    hint_1 = f"{code[0]}###"
-    embed = discord.Embed(title=f"{EMOJI_BLOOD} **HIGH VALUE VAULT DETECTED** {EMOJI_BLOOD}", color=0x8a0404)
-    desc = (f"The Admins locked the best loot inside. Are you smart enough to take it, or are you just muscle?\n\n🎯 **TASK:** Crack the 4-digit PIN before anyone else.\n⚠️ **WARNING:** Area is Hot. Expect PvP.\n🛡️ **SECURITY:** 15s Lockout protocol active on fail.\n\n{EMOJI_REWARD} **MYSTERY REWARD:** {prize}")
-    embed.description = desc
-    embed.add_field(name="📡 LEAKED DATA", value=f"`{hint_1}`", inline=True)
-    embed.set_image(url=VAULT_IMAGE_URL)      
-    embed.set_footer(text="HELL SYSTEM • Vault Event") 
-    view = VaultView()
-    msg = await channel.send(embed=embed, view=view)
-    vault_state["active"] = True
-    vault_state["code"] = code
-    vault_state["prize"] = prize
-    vault_state["message_id"] = msg.id
+    
+    embed = discord.Embed(title=f"{EMOJI_BLOOD} **VAULT DETECTED**", description=f"Crack the PIN.\nReward: {prize}", color=0x8a0404)
+    embed.add_field(name="📡 LEAKED DATA", value=f"`{code[0]}###`", inline=True)
+    embed.set_image(url=VAULT_IMAGE_URL)
+    
+    msg = await ch.send(embed=embed, view=VaultView())
+    vault_state.update({"active": True, "code": code, "prize": prize, "message_id": msg.id})
     if vault_state["hints_task"]: vault_state["hints_task"].cancel()
-    vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(channel, msg, code))
-    await interaction.followup.send(f"✅ Evento iniciado.")
+    vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(ch, msg, code))
+    await interaction.followup.send("✅ Started")
 
-@bot.tree.command(name="start_giveaway", description="Inicia un sorteo")
+@bot.tree.command(name="start_giveaway")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator: return
-    seconds = convert_time(tiempo) 
-    if seconds <= 0: return
-    embed = discord.Embed(title="🎉 GIVEAWAY", description=f"Prize: **{premio}**\nTime: **{tiempo}**", color=0xff0000)
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(f"🎉 **GIVEAWAY**\nPrize: {premio}")
     msg = await interaction.original_response()
     await msg.add_reaction("🎉")
-    await asyncio.sleep(seconds)
-
-@bot.tree.command(name="finish_polls", description="Publica resultados.")
-async def finish_polls(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator: return
-    await interaction.response.send_message("Procesando...", ephemeral=True)
 
 # ==========================================
-# 🛡️ GESTOR MENSAJES (.suggest y limpieza)
-# ==========================================
-@bot.event
-async def on_message(message):
-    if message.author.bot: return
-
-    # --- SUGERENCIAS ---
-    if message.channel.id == SUGGEST_CHANNEL_ID:
-        if not message.content.startswith(".suggest"):
-            try: await message.delete()
-            except: pass
-            return
-        try: await message.delete()
-        except: pass
-        suggestion_content = message.content[8:].strip()
-        if not suggestion_content: return 
-        
-        embed = discord.Embed(description=f"**{suggestion_content}**", color=0xffaa00)
-        embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
-        embed.set_footer(text="HELL SYSTEM • Suggestions") 
-        sent_msg = await message.channel.send(embed=embed)
-        try:
-            await sent_msg.add_reaction(CHECK_ICON)
-            await sent_msg.add_reaction(CROSS_ICON)
-        except: pass
-        return
-
-    # --- LIMPIEZA CANAL COMANDOS ---
-    if message.channel.id == CMD_CHANNEL_ID:
-        # El delay=120 significa 2 minutos (120 segundos)
-        try: await message.delete(delay=120) 
-        except: pass 
-
-    await bot.process_commands(message)
-
-# ==========================================
-# 🚀 STARTUP
+# 🛡️ EVENTOS
 # ==========================================
 @bot.event
 async def on_ready():
-    print(f"🔥 HELL SYSTEM ONLINE - {bot.user}")
-    
-    bot.add_view(RolesView())
-    bot.add_view(VaultView()) 
-    bot.add_view(DinoView()) 
-    
+    print(f"🔥 HELL SYSTEM ONLINE: {bot.user}")
     try: await bot.tree.sync()
     except: pass
-
-    # Iniciar loops
-    if not dino_game_loop.is_running():
-        dino_game_loop.start()
     
-    if not minigames_auto_loop.is_running():
-        minigames_auto_loop.start()
+    # Iniciar Loops
+    if not dino_game_loop.is_running(): dino_game_loop.start()
+    if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
+    
+    # Recuperar Vistas
+    bot.add_view(RolesView())
+    bot.add_view(VaultView())
 
-    # --- 1. ROLES ---
-    roles_channel = bot.get_channel(ROLES_CHANNEL_ID)
-    if roles_channel:
-        try:
-            last_role_msg = None
-            async for msg in roles_channel.history(limit=1): last_role_msg = msg
-            roles_ok = False
-            if last_role_msg and last_role_msg.author == bot.user and last_role_msg.embeds:
-                if "NOTIFICATIONS & ACCESS" in (last_role_msg.embeds[0].title or ""): roles_ok = True
-            if not roles_ok:
-                async for msg in roles_channel.history(limit=10):
-                    if msg.author == bot.user: await msg.delete()
-                embed = discord.Embed(
-                    title=f"{NOTIFICATION_ICON} **NOTIFICATIONS & ACCESS**",
-                    description=(f"{HELL_ARROW} Click the buttons below to toggle your roles.\n{HELL_ARROW} Select the channels you want to see.\n━━━━━━━━━━━━━━━━━━━━━━━━"),
-                    color=0x990000
-                )
-                embed.set_footer(text="HELL SYSTEM • Auto-Roles") 
-                await roles_channel.send(embed=embed, view=RolesView())
-        except: pass
-
-    # --- 2. SETUP DE TIENDA (AUTO-SEARCH/CREATE) ---
-    for guild in bot.guilds:
-        shop_channel = discord.utils.get(guild.text_channels, name=SHOP_CHANNEL_NAME)
+    # Setup Comandos (Limpio)
+    c_ch = bot.get_channel(CMD_CHANNEL_ID)
+    if c_ch:
+        async for m in c_ch.history(limit=5):
+            if m.author == bot.user: await m.delete()
         
-        # Si no existe, crear
-        if not shop_channel:
-            try:
-                overwrites = {
-                    guild.default_role: discord.PermissionOverwrite(send_messages=False),
-                    guild.me: discord.PermissionOverwrite(send_messages=True)
-                }
-                shop_channel = await guild.create_text_channel(SHOP_CHANNEL_NAME, overwrites=overwrites)
-                print(f"✅ Canal de tienda creado: {SHOP_CHANNEL_NAME}")
-            except Exception as e:
-                print(f"❌ Error creando tienda: {e}")
-        
-        # Si existe, postear menú
-        if shop_channel:
-            last_msg = None
-            async for msg in shop_channel.history(limit=1): last_msg = msg
-            
-            shop_ok = False
-            if last_msg and last_msg.author == bot.user and last_msg.embeds:
-                if "BLACK MARKET SHOP" in (last_msg.embeds[0].title or ""): shop_ok = True
-            
-            if not shop_ok:
-                await shop_channel.purge(limit=10)
-                embed = discord.Embed(title=f"{EMOJI_REWARD} **BLACK MARKET SHOP** {EMOJI_REWARD}", color=0x9900FF)
-                embed.description = f"Earn {EMOJI_POINTS} by winning minigames.\n{HELL_ARROW} **Dino Win:** 150 Pts\n{HELL_ARROW} **Vault Win:** 2000 Pts\n\n**⚠️ OPEN A TICKET TO BUY ⚠️**\n━━━━━━━━━━━━━━━━━━━━━━━━"
-                for item in SHOP_ITEMS:
-                    embed.add_field(
-                        name=f"📦 {item['name']}",
-                        value=f"{EMOJI_POINTS} **{item['price']}**\n*{item['desc']}*",
-                        inline=False
-                    )
-                embed.set_footer(text="Hell System • Economy")
-                await shop_channel.send(embed=embed)
-
-    # --- 3. ACTUALIZAR LISTA DE COMANDOS (SOLO JUGADOR) ---
-    cmd_channel = bot.get_channel(CMD_CHANNEL_ID)
-    if cmd_channel:
-        try:
-            last_cmd_msg = None
-            async for msg in cmd_channel.history(limit=1):
-                 if msg.author == bot.user: last_cmd_msg = msg; break
-            
-            # Construir Embed
-            embed_cmds = discord.Embed(title=f"🛠️ **SERVER COMMANDS**", color=0x990000)
-            
-            # Campo Jugador SOLAMENTE
-            embed_cmds.add_field(
-                name="👤 **PLAYER COMMANDS**", 
-                value=f"{HELL_ARROW} **!recipes** - Ver crafteos\n{HELL_ARROW} **!points** - Ver puntos\n{HELL_ARROW} **.suggest <text>** - Sugerencia",
-                inline=False
-            )
-            # ¡CAMPO ADMIN ELIMINADO!
-            
-            embed_cmds.set_footer(text="HELL SYSTEM • Commands")
-
-            # Verificar si hay que reenviar (Comprobamos si el título es el mismo y si solo tiene 1 campo)
-            list_ok = False
-            if last_cmd_msg and last_cmd_msg.embeds:
-                if "SERVER COMMANDS" in (last_cmd_msg.embeds[0].title or ""):
-                    if len(last_cmd_msg.embeds[0].fields) == 1: # Solo 1 campo (Player)
-                        list_ok = True
-            
-            if not list_ok:
-                async for msg in cmd_channel.history(limit=10):
-                    if msg.author == bot.user: await msg.delete()
-                await cmd_channel.send(embed=embed_cmds)
-        except: pass
-
-    # --- 4. SUGERENCIAS ---
-    suggest_channel = bot.get_channel(SUGGEST_CHANNEL_ID)
-    if suggest_channel:
-        try:
-            last_sug_msg = None
-            async for msg in suggest_channel.history(limit=1): last_sug_msg = msg
-            
-            guide_ok = False
-            if last_sug_msg and last_sug_msg.author == bot.user and last_sug_msg.embeds:
-                if "SUGGESTION SYSTEM" in (last_sug_msg.embeds[0].title or ""): guide_ok = True
-            
-            if not guide_ok:
-                async for msg in suggest_channel.history(limit=20):
-                    if msg.author == bot.user and msg.embeds:
-                        if "SUGGESTION SYSTEM" in (msg.embeds[0].title or ""):
-                            await msg.delete()
-
-                embed = discord.Embed(
-                    title="💡 **SUGGESTION SYSTEM**",
-                    description=(f"To suggest something, use the command below:\n\n` .suggest <your text> `\n\n{HELL_ARROW} **Example:** `.suggest Add more kits`\n━━━━━━━━━━━━━━━━━━━━━━━━"),
-                    color=0x990000
-                )
-                embed.set_footer(text="HELL SYSTEM • Suggestions") 
-                await suggest_channel.send(embed=embed)
-        except: pass
-
-    # --- 5. NOMBRES ---
-    for guild in bot.guilds:
-        role = guild.get_role(SUPPORT_ROLE_ID)
-        if role:
-            for member in guild.members:
-                name_check = member.global_name if member.global_name else member.name
-                if name_check and SUPPORT_TEXT.lower() in name_check.lower():
-                    if role not in member.roles:
-                        try: await member.add_roles(role)
-                        except: pass
+        embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
+        embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**", inline=False)
+        embed.set_footer(text="HELL SYSTEM • Commands")
+        await c_ch.send(embed=embed)
 
 @bot.event
-async def on_member_update(before, after):
-    name_check = after.global_name if after.global_name else after.name
-    if not name_check: return
-    role = after.guild.get_role(SUPPORT_ROLE_ID)
-    if not role: return
-    name_has_tag = SUPPORT_TEXT.lower() in name_check.lower()
-    has_role = role in after.roles
-    if name_has_tag and not has_role:
-        try: await after.add_roles(role)
+async def on_message(message):
+    if message.author.bot: return
+    if message.channel.id == SUGGEST_CHANNEL_ID:
+        if message.content.startswith(".suggest"):
+            txt = message.content[8:].strip()
+            if txt:
+                try: await message.delete()
+                except: pass
+                embed = discord.Embed(description=f"**{txt}**", color=0xffaa00)
+                embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+                msg = await message.channel.send(embed=embed)
+                await msg.add_reaction(CHECK_ICON)
+                await msg.add_reaction(CROSS_ICON)
+        else:
+            try: await message.delete()
+            except: pass
+        return
+    if message.channel.id == CMD_CHANNEL_ID:
+        try: await message.delete(delay=120)
         except: pass
-    elif not name_has_tag and has_role:
-        try: await after.remove_roles(role)
-        except: pass
-
-def convert_time(time_str):
-    unit = time_str[-1].lower()
-    try: val = int(time_str[:-1])
-    except: return -1
-    if unit == 's': return val
-    if unit == 'm': return val * 60
-    if unit == 'h': return val * 3600
-    if unit == 'd': return val * 86400
-    return 0
+    await bot.process_commands(message)
 
 if __name__ == "__main__":
-    if TOKEN:
-        bot.run(TOKEN)
+    if TOKEN: bot.run(TOKEN)
