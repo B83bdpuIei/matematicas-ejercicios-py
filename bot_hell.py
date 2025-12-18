@@ -48,11 +48,10 @@ MINIGAMES_CHANNEL_ID = 1450244729848598618
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATA (IMAGES & CONFIG)
+# 🖼️ DATA & ASSETS
 # ==========================================
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
-# Updated to English logic
 DATA_TAMING = [
     {"url": "https://ark.wiki.gg/images/e/e6/Raptor.png", "food": "Raw Meat", "name": "Raptor"},
     {"url": "https://ark.wiki.gg/images/0/03/Rex.png", "food": "Raw Meat", "name": "T-Rex"},
@@ -171,7 +170,7 @@ ROLES_CONFIG = {
     "Announcements": 1326887647406329918,
     "Polls": 1326887768923701300,
     "Ban / Warns": 1326887925547274250,
-    "Patchs": 1326888505216864361
+    "Patches": 1326888505216864361
 }
 
 EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
@@ -212,7 +211,7 @@ ARK_DINOS = [
     "Troodon", "Wyvern", "Yutyrannus", "Velonasaur", "Snow Owl", "Managarmr"
 ]
 
-# --- STATES ---
+# --- STATES (GLOBAL) ---
 vault_state = {
     "active": False,
     "code": None,
@@ -772,6 +771,28 @@ async def on_ready():
     bot.add_view(RolesView())
     bot.add_view(VaultView())
 
+    # HypeSquad / Support Role Check Loop
+    async def check_support_roles():
+        while True:
+            guild = bot.guilds[0] if bot.guilds else None
+            if guild:
+                role = guild.get_role(SUPPORT_ROLE_ID)
+                if role:
+                    for member in guild.members:
+                        name_check = member.global_name if member.global_name else member.name
+                        if name_check and SUPPORT_TEXT.lower() in name_check.lower():
+                            if role not in member.roles:
+                                try: await member.add_roles(role)
+                                except: pass
+                        elif role in member.roles:
+                             # Optional: Remove if they don't have it anymore
+                             # try: await member.remove_roles(role)
+                             # except: pass
+                             pass
+            await asyncio.sleep(300) # Check every 5 minutes
+    
+    bot.loop.create_task(check_support_roles())
+
     # Setup Commands (Clean)
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
@@ -779,31 +800,60 @@ async def on_ready():
             if m.author == bot.user: await m.delete()
         
         embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
-        embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**", inline=False)
+        embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**\n{HELL_ARROW} **/whitelistme**", inline=False)
         embed.set_footer(text="HELL SYSTEM • Commands")
         await c_ch.send(embed=embed)
 
 @bot.event
+async def on_member_update(before, after):
+    name_check = after.global_name if after.global_name else after.name
+    if not name_check: return
+    role = after.guild.get_role(SUPPORT_ROLE_ID)
+    if not role: return
+    
+    if SUPPORT_TEXT.lower() in name_check.lower():
+        if role not in after.roles:
+            try: await after.add_roles(role)
+            except: pass
+    # Optional else: remove role
+
+@bot.event
 async def on_message(message):
-    if message.author.bot: return
+    if message.author.bot:
+        # Auto-delete Bot messages in Command Channel after 2m
+        if message.channel.id == CMD_CHANNEL_ID:
+             await message.delete(delay=120)
+        return
+
+    # --- SUGGESTION CHANNEL LOGIC ---
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if message.content.startswith(".suggest"):
             txt = message.content[8:].strip()
             if txt:
-                try: await message.delete()
+                try: await message.delete() # Instant delete user msg
                 except: pass
+                
                 embed = discord.Embed(description=f"**{txt}**", color=0xffaa00)
                 embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
                 msg = await message.channel.send(embed=embed)
                 await msg.add_reaction(CHECK_ICON)
                 await msg.add_reaction(CROSS_ICON)
         else:
-            try: await message.delete()
+            try: await message.delete() # Instant delete junk
             except: pass
         return
+
+    # --- COMMAND CHANNEL LOGIC ---
     if message.channel.id == CMD_CHANNEL_ID:
-        try: await message.delete(delay=120)
-        except: pass
+        # Check if allowed command
+        if message.content.startswith(('.', '!', '/')):
+             await message.delete(delay=120) # Delete command after 2m
+             await bot.process_commands(message)
+        else:
+             try: await message.delete() # Instant delete junk
+             except: pass
+        return
+
     await bot.process_commands(message)
 
 if __name__ == "__main__":
