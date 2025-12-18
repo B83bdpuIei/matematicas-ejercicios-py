@@ -9,6 +9,7 @@ import re
 import time
 import json
 import traceback
+import io # Librería para manejar archivos en memoria (rápido)
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -45,10 +46,13 @@ VAULT_CHANNEL_ID = 1450244608817762465
 DINO_CHANNEL_ID = 1450244689285353544 
 MINIGAMES_CHANNEL_ID = 1450244729848598618
 
+# 🔴 CLOUD DATABASE CHANNEL (Tu ID privada)
+DB_CHANNEL_ID = 1451330350436323348
+
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATA & ASSETS
+# 🖼️ DATA
 # ==========================================
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
@@ -122,19 +126,19 @@ DATA_BREEDING_IMGS = [
 ]
 
 DATA_ALPHAS = [
-    # EASY (70% win, 300 pts)
-    {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 300, "loss": 300, "chance": 0.70, "color": discord.Color.green()},
-    {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 300, "loss": 300, "chance": 0.70, "color": discord.Color.green()},
-    # NORMAL (50% win, 600 pts)
-    {"url": "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png", "name": "Alpha T-Rex", "win": 600, "loss": 600, "chance": 0.50, "color": discord.Color.gold()},
-    {"url": "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png", "name": "Alpha Megalodon", "win": 600, "loss": 600, "chance": 0.50, "color": discord.Color.gold()},
-    # HARD (40% win, 1200 pts)
-    {"url": "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png", "name": "Alpha Wyvern", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
-    {"url": "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png", "name": "Alpha Basilisk", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
-    {"url": "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png", "name": "Alpha Reaper", "win": 1200, "loss": 1200, "chance": 0.40, "color": discord.Color.red()},
-    # EXTREME (30% win, 2500 pts)
-    {"url": "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png", "name": "Alpha Mosasaur", "win": 2500, "loss": 2500, "chance": 0.30, "color": discord.Color.purple()},
-    {"url": "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png", "name": "Alpha Tusoteuthis", "win": 2500, "loss": 2500, "chance": 0.30, "color": discord.Color.purple()},
+    # EASY (200 pts)
+    {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
+    {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
+    # NORMAL (300 pts)
+    {"url": "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png", "name": "Alpha T-Rex", "win": 300, "loss": 300, "chance": 0.50, "color": discord.Color.gold()},
+    {"url": "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png", "name": "Alpha Megalodon", "win": 300, "loss": 300, "chance": 0.50, "color": discord.Color.gold()},
+    # HARD (400 pts)
+    {"url": "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png", "name": "Alpha Wyvern", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
+    {"url": "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png", "name": "Alpha Basilisk", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
+    {"url": "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png", "name": "Alpha Reaper", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
+    # EXTREME (500 pts)
+    {"url": "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png", "name": "Alpha Mosasaur", "win": 500, "loss": 500, "chance": 0.30, "color": discord.Color.purple()},
+    {"url": "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png", "name": "Alpha Tusoteuthis", "win": 500, "loss": 500, "chance": 0.30, "color": discord.Color.purple()},
 ]
 
 DATA_POKEMON = [
@@ -192,11 +196,17 @@ SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
 
 SHOP_ITEMS = [
-    {"name": "Starter Kit", "price": 3000, "desc": "Full Metal Kit + Cryos"},
-    {"name": "Dino Color Change", "price": 7500, "desc": "Change color of 1 Dino"},
-    {"name": "Turret Filler (1x)", "price": 12000, "desc": "Fill 1 Turret Box"},
-    {"name": "Base Rename", "price": 20000, "desc": "Rename Tribe/Base"},
-    {"name": "VIP Bronze (3 Days)", "price": 50000, "desc": "Trial VIP Role"}
+    {"name": "1 BP", "price": 15000, "desc": "Random High Quality Blueprint"},
+    {"name": "1 Paint for Dino", "price": 15000, "desc": "Custom Dino Coloring"},
+    {"name": "1 Breed", "price": 30000, "desc": "Dino Breeding Service"},
+    {"name": "1 Ascension", "price": 30000, "desc": "Boss Ascension Unlock"},
+    {"name": "1 Dedi", "price": 45000, "desc": "Tek Dedicated Storage"},
+    {"name": "1 Ammo Dedi", "price": 45000, "desc": "Dedicated Storage full of Ammo"},
+    {"name": "5€ Credit", "price": 45000, "desc": "Store Credit"},
+    {"name": "1 Modded Cave", "price": 80000, "desc": "Exclusive Cave Location"},
+    {"name": "25€ Credit", "price": 300000, "desc": "Store Credit"},
+    {"name": "Private Map", "price": 500000, "desc": "Private Map Access"},
+    {"name": "Reaper Queen", "price": 1000000, "desc": "R-Reaper Queen Tame"}
 ]
 
 ARK_DINOS = [
@@ -220,47 +230,81 @@ vault_state = {
     "hints_task": None
 }
 user_cooldowns = {} 
-
-# VARIABLES FOR LAST GAME
 last_minigame_message = None 
 
-# --- POINTS SYSTEM ---
-POINTS_FILE = "points.json"
-
-def load_points():
-    if not os.path.exists(POINTS_FILE):
-        return {}
-    try:
-        with open(POINTS_FILE, "r") as f:
-            return json.load(f)
-    except: return {}
-
-def save_points(data):
-    with open(POINTS_FILE, "w") as f:
-        json.dump(data, f)
+# --- RAM DATABASE & CLOUD SYNC ---
+# We keep points in this RAM dictionary
+points_data = {} 
 
 def add_points_to_user(user_id, amount):
-    data = load_points()
     uid = str(user_id)
-    if uid not in data: data[uid] = 0
-    data[uid] += amount
-    save_points(data)
-    return data[uid]
+    if uid not in points_data: points_data[uid] = 0
+    points_data[uid] += amount
+    return points_data[uid]
 
 def remove_points_from_user(user_id, amount):
-    data = load_points()
     uid = str(user_id)
-    if uid not in data: data[uid] = 0
-    if data[uid] < amount: 
-        data[uid] = 0 
+    if uid not in points_data: points_data[uid] = 0
+    if points_data[uid] < amount: 
+        points_data[uid] = 0 
     else:
-        data[uid] -= amount
-    save_points(data)
+        points_data[uid] -= amount
     return True
 
 def get_user_points(user_id):
-    data = load_points()
-    return data.get(str(user_id), 0)
+    return points_data.get(str(user_id), 0)
+
+# CLOUD BACKUP LOOP (Uses Discord Channel as Storage)
+async def backup_points_task():
+    await bot.wait_until_ready()
+    
+    # 1. LOAD FROM DISCORD ON STARTUP
+    try:
+        channel = bot.get_channel(DB_CHANNEL_ID)
+        if channel:
+            print("[DB] Checking Discord for backup...")
+            found = False
+            # Check last 10 messages for a file
+            async for msg in channel.history(limit=10):
+                if msg.author == bot.user and msg.attachments:
+                    try:
+                        # Download the file content into memory
+                        data_bytes = await msg.attachments[0].read()
+                        global points_data
+                        points_data = json.loads(data_bytes)
+                        print(f"[DB] Successfully loaded points for {len(points_data)} users.")
+                        found = True
+                        break
+                    except: pass
+            if not found:
+                print("[DB] No backup found. Starting with 0 points.")
+    except Exception as e:
+        print(f"[DB ERROR] Startup load failed: {e}")
+
+    # 2. SAVE LOOP (Every 2 minutes)
+    while not bot.is_closed():
+        await asyncio.sleep(120) 
+        try:
+            channel = bot.get_channel(DB_CHANNEL_ID)
+            if channel and points_data:
+                # Convert RAM dict to JSON string in memory
+                json_str = json.dumps(points_data, indent=None) # Compact JSON
+                file_obj = discord.File(io.StringIO(json_str), filename="db_points.json")
+                
+                # Send new backup
+                await channel.send(f"Backup: {int(time.time())}", file=file_obj)
+                
+                # Cleanup old messages (keep channel clean)
+                try:
+                    async for msg in channel.history(limit=10):
+                        # Delete if it's older than the one we just sent (approx logic)
+                        if msg.author == bot.user and (time.time() - msg.created_at.timestamp()) > 10:
+                            await msg.delete()
+                except: pass
+                
+                print("[DB] Saved to Cloud.")
+        except Exception as e:
+            print(f"[DB ERROR] Save failed: {e}")
 
 # ==========================================
 # ⚙️ SETUP BOT
@@ -274,7 +318,7 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🦖 MINIGAME: WHO IS THE DINO (SCRAMBLE)
+# 🦖 MINIGAME: WHO IS THE DINO (SCRAMBLE) - 200 PTS
 # ==========================================
 
 class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
@@ -288,7 +332,6 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
     async def on_submit(self, interaction: discord.Interaction):
         guess = self.answer_input.value.strip().lower()
         
-        # Anti-Doble Click Logic
         if self.view_ref and self.view_ref.grabbed:
              await interaction.response.send_message("❌ Someone was faster.", ephemeral=True)
              return
@@ -296,7 +339,7 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
         if guess == self.correct_answer.lower():
             if self.view_ref: self.view_ref.grabbed = True 
             
-            points_won = 150 
+            points_won = 200 
             add_points_to_user(interaction.user.id, points_won)
             try: await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
             except: pass
@@ -365,7 +408,7 @@ async def dino_game_loop():
         print(f"Error in Dino Loop: {e}")
 
 # ==========================================
-# 🎮 MINIGAMES CLASSES (English)
+# 🎮 MINIGAMES CLASSES (English & 200 PTS)
 # ==========================================
 
 # 1. ARK: RED DROP
@@ -383,12 +426,12 @@ class ArkDropView(discord.ui.View):
             button.label = f"Loot of {interaction.user.name}"
             button.style = discord.ButtonStyle.secondary
             button.disabled = True
-            add_points_to_user(interaction.user.id, 500)
+            add_points_to_user(interaction.user.id, 200) # 200 PTS
             embed = interaction.message.embeds[0]
             embed.color = discord.Color.dark_grey()
-            embed.set_footer(text=f"Claimed by: {interaction.user.display_name} (+500 Points)")
+            embed.set_footer(text=f"Claimed by: {interaction.user.display_name} (+200 Points)")
             await interaction.response.edit_message(embed=embed, view=self)
-            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop and won 500 points!", ephemeral=False)
+            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop and won 200 points!", ephemeral=False)
             self.stop()
         except Exception: pass
 
@@ -406,7 +449,7 @@ class ArkTameView(discord.ui.View):
         
         try:
             if food == self.correct_food:
-                add_points_to_user(interaction.user.id, 200)
+                add_points_to_user(interaction.user.id, 200) # 200 PTS
                 await interaction.response.send_message(f"🦕 **TAMED!** {interaction.user.mention} gave {food} to the {self.dino_name} (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
@@ -436,8 +479,8 @@ class ArkCraftView(discord.ui.View):
         
         try:
             if mat_clicked == self.correct_mat:
-                add_points_to_user(interaction.user.id, 150)
-                await interaction.response.send_message(f"🔨 **Correct!** {interaction.user.mention} crafted the item (+150 pts).", ephemeral=False)
+                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                await interaction.response.send_message(f"🔨 **Correct!** {interaction.user.mention} crafted the item (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
@@ -470,8 +513,8 @@ class ArkImprintView(discord.ui.View):
         
         try:
             if action == self.needs:
-                add_points_to_user(interaction.user.id, 300)
-                await interaction.response.send_message(f"❤️ **Imprinting increased!** {interaction.user.mention} got it right (+300 pts).", ephemeral=False)
+                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                await interaction.response.send_message(f"❤️ **Imprinting increased!** {interaction.user.mention} got it right (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
@@ -492,7 +535,7 @@ class ArkImprintView(discord.ui.View):
     @discord.ui.button(label="Feed 🍖", style=discord.ButtonStyle.danger, custom_id="imp_fed")
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Feed")
 
-# 5. ARK: ALPHA HUNT
+# 5. ARK: ALPHA HUNT (Variable Rewards)
 class ArkAlphaView(discord.ui.View):
     def __init__(self, win, loss, chance): 
         super().__init__(timeout=None)
@@ -533,8 +576,8 @@ class PokemonVisualView(discord.ui.View):
         
         try:
             if type_guess == self.correct_type:
-                add_points_to_user(interaction.user.id, 150)
-                await interaction.response.send_message(f"✅ **Correct!** {interaction.user.mention} got it right (+150 pts).", ephemeral=False)
+                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                await interaction.response.send_message(f"✅ **Correct!** {interaction.user.mention} got it right (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
                 self.stop()
@@ -763,6 +806,9 @@ async def on_ready():
     try: await bot.tree.sync()
     except: pass
     
+    # Start Cloud Backup Task
+    bot.loop.create_task(backup_points_task())
+
     # Start Loops
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
@@ -784,20 +830,46 @@ async def on_ready():
                             if role not in member.roles:
                                 try: await member.add_roles(role)
                                 except: pass
-                        elif role in member.roles:
-                             # Optional: Remove if they don't have it anymore
-                             # try: await member.remove_roles(role)
-                             # except: pass
-                             pass
-            await asyncio.sleep(300) # Check every 5 minutes
+            await asyncio.sleep(60) # Check every 60s
     
     bot.loop.create_task(check_support_roles())
 
-    # Setup Commands (Clean)
+    # Setup Shop Channel (Auto-Create/Update)
+    for guild in bot.guilds:
+        shop_channel = discord.utils.get(guild.text_channels, name=SHOP_CHANNEL_NAME)
+        if not shop_channel:
+            try:
+                overwrites = {guild.default_role: discord.PermissionOverwrite(send_messages=False), guild.me: discord.PermissionOverwrite(send_messages=True)}
+                shop_channel = await guild.create_text_channel(SHOP_CHANNEL_NAME, overwrites=overwrites)
+            except: pass
+        
+        if shop_channel:
+            # Check last message to avoid spamming
+            last_msg = None
+            async for m in shop_channel.history(limit=1): last_msg = m
+            
+            # Re-post shop if last message isn't the shop menu
+            is_shop_ok = False
+            if last_msg and last_msg.author == bot.user and last_msg.embeds:
+                if "BLACK MARKET SHOP" in (last_msg.embeds[0].title or ""): is_shop_ok = True
+            
+            if not is_shop_ok:
+                await shop_channel.purge(limit=5)
+                embed = discord.Embed(title=f"{EMOJI_REWARD} **BLACK MARKET SHOP** {EMOJI_REWARD}", color=0x9900FF)
+                embed.description = f"Earn {EMOJI_POINTS} by winning minigames.\n**⚠️ OPEN A TICKET TO BUY ⚠️**\n━━━━━━━━━━━━━━━━━━━━━━━━"
+                for item in SHOP_ITEMS:
+                    embed.add_field(name=f"📦 {item['name']}", value=f"{EMOJI_POINTS} **{item['price']}**\n*{item['desc']}*", inline=False)
+                embed.set_footer(text="Hell System • Economy")
+                await shop_channel.send(embed=embed)
+
+    # Setup Commands (Clean & Safe)
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
+        # Sleep to avoid Rate Limits on startup spam
         async for m in c_ch.history(limit=5):
-            if m.author == bot.user: await m.delete()
+            if m.author == bot.user:
+                await m.delete()
+                await asyncio.sleep(1.5)
         
         embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
         embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**\n{HELL_ARROW} **/whitelistme**", inline=False)
@@ -815,14 +887,17 @@ async def on_member_update(before, after):
         if role not in after.roles:
             try: await after.add_roles(role)
             except: pass
-    # Optional else: remove role
 
 @bot.event
 async def on_message(message):
     if message.author.bot:
-        # Auto-delete Bot messages in Command Channel after 2m
         if message.channel.id == CMD_CHANNEL_ID:
-             await message.delete(delay=120)
+            # PROTECT THE HELP MENU
+            if message.author == bot.user and message.embeds:
+                if "SERVER COMMANDS" in (message.embeds[0].title or ""):
+                    return # Do NOT delete
+            # Delete any other bot msg after 2 min
+            await message.delete(delay=120)
         return
 
     # --- SUGGESTION CHANNEL LOGIC ---
@@ -830,9 +905,8 @@ async def on_message(message):
         if message.content.startswith(".suggest"):
             txt = message.content[8:].strip()
             if txt:
-                try: await message.delete() # Instant delete user msg
+                try: await message.delete() # Instant delete
                 except: pass
-                
                 embed = discord.Embed(description=f"**{txt}**", color=0xffaa00)
                 embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
                 msg = await message.channel.send(embed=embed)
@@ -845,9 +919,12 @@ async def on_message(message):
 
     # --- COMMAND CHANNEL LOGIC ---
     if message.channel.id == CMD_CHANNEL_ID:
-        # Check if allowed command
-        if message.content.startswith(('.', '!', '/')):
-             await message.delete(delay=120) # Delete command after 2m
+        # Check if allowed command prefix OR if it's a System Message (type 20+)
+        is_command = message.content.startswith(('.', '!', '/'))
+        is_system = message.type != discord.MessageType.default and message.type != discord.MessageType.reply
+
+        if is_command or is_system:
+             await message.delete(delay=120) 
              await bot.process_commands(message)
         else:
              try: await message.delete() # Instant delete junk
