@@ -14,7 +14,7 @@ import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER
+# 🚑 FAKE WEB SERVER (Para Render/Hosts)
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -38,7 +38,7 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # IDs CHANNELS
-GIVEAWAY_CHANNEL_ID = 1449849645495746803 
+GIVEAWAY_CHANNEL_ID = 1449849645495746803 # Canal de Sponsors
 POLLS_CHANNEL_ID = 1449083865862770819       
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
@@ -53,9 +53,37 @@ DB_CHANNEL_ID = 1451330350436323348
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATA
+# 🖼️ DATA & EMOJIS
 # ==========================================
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
+
+# Emojis Generales
+HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
+NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
+CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
+CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
+EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
+EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
+
+# Emojis Minijuegos/Economía
+EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
+EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"      
+EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"          
+EMOJI_WINNER     = "<a:party:1450625235383488649>"          
+EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
+EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
+
+# 🔥 EMOJIS NUEVOS (VAULT & GIVEAWAY) 🔥
+EMOJI_PARTY_NEW = "<a:party:1137005680520331304>" # Para el título del Vault y reacción Giveaway
+EMOJI_VAULT_WINNER_ICON = "<a:emoji_69:1328804255741771899>" # Diamante morado
+EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>" # Para Loot del Vault y Prize del Giveaway
+EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>" # Fuego para título Giveaway Sponsor
+EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>" # Reloj para Giveaway
+
+VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
+
+SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
+SUPPORT_ROLE_ID = 1336477737594130482
 
 DATA_TAMING = [
     {"url": "https://ark.wiki.gg/images/e/e6/Raptor.png", "food": "Raw Meat", "name": "Raptor"},
@@ -173,26 +201,6 @@ ROLES_CONFIG = {
     "Ban / Warns": 1326887925547274250,
     "Patches": 1326888505216864361
 }
-
-EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
-EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"      
-EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"          
-EMOJI_WINNER     = "<a:party:1450625235383488649>"          
-EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
-EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
-
-# 🔥 AQUÍ ESTÁ EL ID QUE ME CONFIRMASTE AL FINAL
-HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
-
-NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
-CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
-CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
-VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
-EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
-EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
-
-SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
-SUPPORT_ROLE_ID = 1336477737594130482
 
 SHOP_ITEMS = [
     {"name": "1 BP", "price": 15000, "desc": "Random High Quality Blueprint"},
@@ -670,12 +678,12 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             add_points_to_user(interaction.user.id, 2000)
             await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.**", ephemeral=True)
             
-            # 🔥 AQUÍ ESTÁ EL ARREGLO DEL MENSAJE DE VICTORIA
-            embed = discord.Embed(title="🎉 VAULT CRACKED! 🎉", color=0xFFD700)
+            # 🔥 ARREGLO DEL MENSAJE DE VICTORIA CON TUS EMOJIS 🔥
+            embed = discord.Embed(title=f"{EMOJI_PARTY_NEW} VAULT CRACKED! {EMOJI_PARTY_NEW}", color=0xFFD700)
             embed.description = (
-                f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
+                f"{EMOJI_VAULT_WINNER_ICON} **WINNER:** {interaction.user.mention}\n"
                 f"➡️ **CODE:** `{vault_state['code']}`\n"
-                f"🎁 **LOOT:** {vault_state['prize']}\n"
+                f"{EMOJI_GIFT_NEW} **LOOT:** {vault_state['prize']}\n"
                 f"{EMOJI_POINTS} **BONUS:** +2000"
             )
             embed.set_footer(text="HELL SYSTEM • Vault Event")
@@ -688,7 +696,6 @@ class VaultView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_btn")
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # AQUI ESTA LA CORRECCION PARA QUE NO PAREZCA ROTA
         if not vault_state["active"]:
              await interaction.response.send_message("❌ Event ended. (Start new one with /event_vault)", ephemeral=True)
              return
@@ -773,15 +780,46 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(ch, msg, code))
     await interaction.followup.send("✅ Started")
 
+# ------------------------------------------------------------------
+# 🔥 COMANDO NUEVO: start_giveaway (LÓGICA SPONSOR + EMOJIS NUEVOS)
+# ------------------------------------------------------------------
 @bot.tree.command(name="start_giveaway")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
-    if not interaction.user.guild_permissions.administrator: return
-    await interaction.response.send_message(f"🎉 **GIVEAWAY**\nPrize: {premio}")
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+        return
+
+    # Lógica de canal (Sponsor vs Normal)
+    is_sponsor_channel = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
+    
+    if is_sponsor_channel:
+        # Formato Sponsor (Rojo, Fuego, Advertencia)
+        embed_color = 0x990000
+        embed_title = f"{EMOJI_FIRE_ANIM} HELL SPONSOR GIVEAWAY {EMOJI_FIRE_ANIM}"
+        footer_text = "⚠️ ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick"
+    else:
+        # Formato Normal (Verde, Simple)
+        embed_color = 0x00FF00
+        embed_title = f"{EMOJI_PARTY_NEW} GIVEAWAY"
+        footer_text = "Hell System • Giveaway"
+
+    # Construir descripción con nuevos emojis
+    description = (
+        f"{EMOJI_GIFT_NEW} **Prize:** {premio}\n"
+        f"{EMOJI_CLOCK_NEW} **Time:** {tiempo}\n\n"
+        f"React with {EMOJI_PARTY_NEW} to enter!"
+    )
+
+    embed = discord.Embed(title=embed_title, description=description, color=embed_color)
+    embed.set_footer(text=footer_text)
+    
+    await interaction.response.send_message(embed=embed)
     msg = await interaction.original_response()
-    await msg.add_reaction("🎉")
+    # Reacción con el emoji de fiesta nuevo
+    await msg.add_reaction(EMOJI_PARTY_NEW)
 
 # ------------------------------------------------------------------
-# 🔥 COMANDO NUEVO: finish_polls (CON EL ID DE EMOJI 121104...)
+# 🔥 COMANDO NUEVO: finish_polls (CON NEGRITAS Y ID CORRECTO)
 # ------------------------------------------------------------------
 @bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
@@ -817,8 +855,7 @@ async def finish_polls(interaction: discord.Interaction):
         if winner_reaction.count > 1:
             question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
             
-            # --- FORMATO FINAL CORRECTO ---
-            # HELL_ARROW ya tiene el valor <a:hell_arrow:1211...>
+            # --- FORMATO FINAL CON NEGRITAS (**) Y EMOJI CORRECTO ---
             results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
             count += 1
 
@@ -855,6 +892,7 @@ async def on_ready():
     bot.add_view(RolesView())
     bot.add_view(VaultView())
 
+    # SISTEMA HYPESQUAD / SUPPORT ROLE (Confirmado que funciona)
     async def check_support_roles():
         while True:
             guild = bot.guilds[0] if bot.guilds else None
@@ -906,6 +944,7 @@ async def on_ready():
 
 @bot.event
 async def on_member_update(before, after):
+    # SISTEMA HYPESQUAD / SUPPORT ROLE (Check instantáneo al cambiar nombre)
     name_check = after.global_name if after.global_name else after.name
     if not name_check: return
     role = after.guild.get_role(SUPPORT_ROLE_ID)
