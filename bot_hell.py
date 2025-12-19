@@ -10,7 +10,7 @@ import time
 import json
 import traceback
 import io 
-import datetime # <--- AÑADIDO (Necesario para la fecha)
+import datetime # Importante para la fecha
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -47,7 +47,7 @@ VAULT_CHANNEL_ID = 1450244608817762465
 DINO_CHANNEL_ID = 1450244689285353544 
 MINIGAMES_CHANNEL_ID = 1450244729848598618
 
-# 🔴 CLOUD DATABASE CHANNEL (Tu ID privada)
+# 🔴 CLOUD DATABASE CHANNEL
 DB_CHANNEL_ID = 1451330350436323348
 
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
@@ -127,17 +127,13 @@ DATA_BREEDING_IMGS = [
 ]
 
 DATA_ALPHAS = [
-    # EASY (200 pts)
     {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
     {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
-    # NORMAL (300 pts)
     {"url": "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png", "name": "Alpha T-Rex", "win": 300, "loss": 300, "chance": 0.50, "color": discord.Color.gold()},
     {"url": "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png", "name": "Alpha Megalodon", "win": 300, "loss": 300, "chance": 0.50, "color": discord.Color.gold()},
-    # HARD (400 pts)
     {"url": "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png", "name": "Alpha Wyvern", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
     {"url": "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png", "name": "Alpha Basilisk", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
     {"url": "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png", "name": "Alpha Reaper", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
-    # EXTREME (500 pts)
     {"url": "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png", "name": "Alpha Mosasaur", "win": 500, "loss": 500, "chance": 0.30, "color": discord.Color.purple()},
     {"url": "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png", "name": "Alpha Tusoteuthis", "win": 500, "loss": 500, "chance": 0.30, "color": discord.Color.purple()},
 ]
@@ -185,7 +181,7 @@ EMOJI_WINNER     = "<a:party:1450625235383488649>"
 EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
 EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
-HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
+HELL_ARROW = "<a:hell_arrow:1211049707128750080>" # (Esta es la variable antigua, pero el comando usa la nueva dentro)
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
@@ -234,7 +230,6 @@ user_cooldowns = {}
 last_minigame_message = None 
 
 # --- RAM DATABASE & CLOUD SYNC ---
-# We keep points in this RAM dictionary
 points_data = {} 
 
 def add_points_to_user(user_id, amount):
@@ -255,21 +250,16 @@ def remove_points_from_user(user_id, amount):
 def get_user_points(user_id):
     return points_data.get(str(user_id), 0)
 
-# CLOUD BACKUP LOOP (Uses Discord Channel as Storage)
 async def backup_points_task():
     await bot.wait_until_ready()
-    
-    # 1. LOAD FROM DISCORD ON STARTUP
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
             print("[DB] Checking Discord for backup...")
             found = False
-            # Check last 10 messages for a file
             async for msg in channel.history(limit=10):
                 if msg.author == bot.user and msg.attachments:
                     try:
-                        # Download the file content into memory
                         data_bytes = await msg.attachments[0].read()
                         global points_data
                         points_data = json.loads(data_bytes)
@@ -282,27 +272,19 @@ async def backup_points_task():
     except Exception as e:
         print(f"[DB ERROR] Startup load failed: {e}")
 
-    # 2. SAVE LOOP (Every 2 minutes)
     while not bot.is_closed():
         await asyncio.sleep(120) 
         try:
             channel = bot.get_channel(DB_CHANNEL_ID)
             if channel and points_data:
-                # Convert RAM dict to JSON string in memory
-                json_str = json.dumps(points_data, indent=None) # Compact JSON
+                json_str = json.dumps(points_data, indent=None)
                 file_obj = discord.File(io.StringIO(json_str), filename="db_points.json")
-                
-                # Send new backup
                 await channel.send(f"Backup: {int(time.time())}", file=file_obj)
-                
-                # Cleanup old messages (keep channel clean)
                 try:
                     async for msg in channel.history(limit=10):
-                        # Delete if it's older than the one we just sent (approx logic)
                         if msg.author == bot.user and (time.time() - msg.created_at.timestamp()) > 10:
                             await msg.delete()
                 except: pass
-                
                 print("[DB] Saved to Cloud.")
         except Exception as e:
             print(f"[DB ERROR] Save failed: {e}")
@@ -319,7 +301,7 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🦖 MINIGAME: WHO IS THE DINO (SCRAMBLE) - 200 PTS
+# 🦖 MINIGAME: WHO IS THE DINO
 # ==========================================
 
 class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
@@ -332,14 +314,12 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
 
     async def on_submit(self, interaction: discord.Interaction):
         guess = self.answer_input.value.strip().lower()
-        
         if self.view_ref and self.view_ref.grabbed:
              await interaction.response.send_message("❌ Someone was faster.", ephemeral=True)
              return
 
         if guess == self.correct_answer.lower():
             if self.view_ref: self.view_ref.grabbed = True 
-            
             points_won = 200 
             add_points_to_user(interaction.user.id, points_won)
             try: await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
@@ -353,7 +333,6 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             )
             embed.set_footer(text="Hell System • Dino Games")
             if interaction.channel: await interaction.channel.send(embed=embed)
-            
             try:
                 view = self.view_ref 
                 for child in view.children: child.disabled = True
@@ -381,16 +360,13 @@ class DinoView(discord.ui.View):
 @tasks.loop(minutes=20)
 async def dino_game_loop():
     if not bot.is_ready(): return
-
     try:
         channel = bot.get_channel(DINO_CHANNEL_ID)
         if not channel: return
-
         dino_real_name = random.choice(ARK_DINOS)
         char_list = list(dino_real_name.upper())
         random.shuffle(char_list)
         scrambled_name = "".join(char_list)
-        
         while scrambled_name == dino_real_name.upper():
             random.shuffle(char_list)
             scrambled_name = "".join(char_list)
@@ -404,30 +380,26 @@ async def dino_game_loop():
         embed.set_footer(text="Hell System • Dino Games")
         view = DinoView(correct_dino=dino_real_name)
         await channel.send(embed=embed, view=view)
-
     except Exception as e:
         print(f"Error in Dino Loop: {e}")
 
 # ==========================================
-# 🎮 MINIGAMES CLASSES (English & 200 PTS)
+# 🎮 MINIGAMES CLASSES
 # ==========================================
 
-# 1. ARK: RED DROP
 class ArkDropView(discord.ui.View):
     def __init__(self): 
         super().__init__(timeout=None)
         self.grabbed = False
-        
     @discord.ui.button(label="CLAIM DROP", style=discord.ButtonStyle.danger, emoji="🎁", custom_id="drop_claim_btn")
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.grabbed: return 
         self.grabbed = True
-        
         try:
             button.label = f"Loot of {interaction.user.name}"
             button.style = discord.ButtonStyle.secondary
             button.disabled = True
-            add_points_to_user(interaction.user.id, 200) # 200 PTS
+            add_points_to_user(interaction.user.id, 200)
             embed = interaction.message.embeds[0]
             embed.color = discord.Color.dark_grey()
             embed.set_footer(text=f"Claimed by: {interaction.user.display_name} (+200 Points)")
@@ -436,21 +408,18 @@ class ArkDropView(discord.ui.View):
             self.stop()
         except Exception: pass
 
-# 2. ARK: TAMING
 class ArkTameView(discord.ui.View):
     def __init__(self, correct_food, dino_name):
         super().__init__(timeout=None)
         self.correct_food = correct_food
         self.dino_name = dino_name
         self.grabbed = False
-    
     async def feed(self, interaction: discord.Interaction, food: str):
         if self.grabbed: return
         self.grabbed = True
-        
         try:
             if food == self.correct_food:
-                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                add_points_to_user(interaction.user.id, 200)
                 await interaction.response.send_message(f"🦕 **TAMED!** {interaction.user.mention} gave {food} to the {self.dino_name} (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
@@ -461,26 +430,22 @@ class ArkTameView(discord.ui.View):
                 await interaction.message.edit(view=self)
                 self.stop()
         except Exception: pass
-
     @discord.ui.button(label="Raw Meat 🥩", style=discord.ButtonStyle.danger, custom_id="tm_meat")
     async def meat(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Raw Meat")
     @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary, custom_id="tm_berry")
     async def berries(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Mejoberries")
 
-# 3. ARK: CRAFTING
 class ArkCraftView(discord.ui.View):
     def __init__(self, correct_mat):
         super().__init__(timeout=None)
         self.correct_mat = correct_mat
         self.grabbed = False
-    
     async def check_mat(self, interaction: discord.Interaction, mat_clicked: str):
         if self.grabbed: return
         self.grabbed = True
-        
         try:
             if mat_clicked == self.correct_mat:
-                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                add_points_to_user(interaction.user.id, 200)
                 await interaction.response.send_message(f"🔨 **Correct!** {interaction.user.mention} crafted the item (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
@@ -491,7 +456,6 @@ class ArkCraftView(discord.ui.View):
                 await interaction.message.edit(view=self)
                 self.stop()
         except Exception: pass
-
     @discord.ui.button(label="Metal / Ingots", style=discord.ButtonStyle.secondary, custom_id="cr_metal")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Metal")
     @discord.ui.button(label="Stone / Wood / Flint", style=discord.ButtonStyle.secondary, custom_id="cr_stone")
@@ -501,20 +465,17 @@ class ArkCraftView(discord.ui.View):
     @discord.ui.button(label="Electronics / Polymer / Gunpowder", style=discord.ButtonStyle.success, custom_id="cr_adv")
     async def b4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Advanced")
 
-# 4. ARK: IMPRINTING
 class ArkImprintView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.needs = random.choice(["Cuddle", "Walk", "Feed"])
         self.grabbed = False
-    
     async def check(self, interaction: discord.Interaction, action: str):
         if self.grabbed: return
         self.grabbed = True
-        
         try:
             if action == self.needs:
-                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                add_points_to_user(interaction.user.id, 200)
                 await interaction.response.send_message(f"❤️ **Imprinting increased!** {interaction.user.mention} got it right (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
@@ -528,7 +489,6 @@ class ArkImprintView(discord.ui.View):
                 await interaction.message.edit(embed=embed, view=self)
                 self.stop()
         except Exception: pass
-
     @discord.ui.button(label="Cuddle 🧸", style=discord.ButtonStyle.primary, custom_id="imp_cud")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Cuddle")
     @discord.ui.button(label="Walk 🚶", style=discord.ButtonStyle.success, custom_id="imp_wlk")
@@ -536,7 +496,6 @@ class ArkImprintView(discord.ui.View):
     @discord.ui.button(label="Feed 🍖", style=discord.ButtonStyle.danger, custom_id="imp_fed")
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Feed")
 
-# 5. ARK: ALPHA HUNT (Variable Rewards)
 class ArkAlphaView(discord.ui.View):
     def __init__(self, win, loss, chance): 
         super().__init__(timeout=None)
@@ -544,12 +503,10 @@ class ArkAlphaView(discord.ui.View):
         self.loss = loss
         self.chance = chance
         self.grabbed = False
-
     @discord.ui.button(label="🗡️ ATTACK ALPHA", style=discord.ButtonStyle.danger, custom_id="alpha_atk")
     async def attack(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.grabbed: return
         self.grabbed = True
-        
         try:
             if random.random() < self.chance: 
                 add_points_to_user(interaction.user.id, self.win)
@@ -557,27 +514,23 @@ class ArkAlphaView(discord.ui.View):
             else: 
                 remove_points_from_user(interaction.user.id, self.loss)
                 await interaction.response.send_message(f"💀 **DEATH...** {interaction.user.mention} died and lost **{self.loss} points**.", ephemeral=False)
-            
             button.disabled = True
             await interaction.message.edit(view=self)
             self.stop()
         except Exception: pass
 
-# 6. POKÉMON
 class PokemonVisualView(discord.ui.View):
     def __init__(self, correct_type, poke_name):
         super().__init__(timeout=None)
         self.correct_type = correct_type
         self.poke_name = poke_name
         self.grabbed = False
-    
     async def guess(self, interaction: discord.Interaction, type_guess: str):
         if self.grabbed: return
         self.grabbed = True
-        
         try:
             if type_guess == self.correct_type:
-                add_points_to_user(interaction.user.id, 200) # 200 PTS
+                add_points_to_user(interaction.user.id, 200)
                 await interaction.response.send_message(f"✅ **Correct!** {interaction.user.mention} got it right (+200 pts).", ephemeral=False)
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
@@ -588,7 +541,6 @@ class PokemonVisualView(discord.ui.View):
                 await interaction.message.edit(view=self)
                 self.stop()
         except Exception: pass
-
     @discord.ui.button(label="Fire 🔥", style=discord.ButtonStyle.danger, custom_id="pk_fir")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Fire")
     @discord.ui.button(label="Water 💧", style=discord.ButtonStyle.primary, custom_id="pk_wat")
@@ -597,53 +549,47 @@ class PokemonVisualView(discord.ui.View):
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Grass")
 
 # ==========================================
-# 🔄 AUTOMATIC SYSTEM (ENGLISH LOOP)
+# 🔄 AUTOMATIC SYSTEM
 # ==========================================
 
 async def spawn_game(channel):
     game_type = random.randint(1, 6)
     view = None
-    
-    if game_type == 1: # Drop
+    if game_type == 1:
         embed = discord.Embed(title="RED SUPPLY DROP INCOMING!", description="Contains high-level loot. Claim it fast!", color=discord.Color.red())
         embed.set_image(url=IMG_ARK_DROP)
         view = ArkDropView()
         msg = await channel.send(embed=embed, view=view)
         return msg
-
-    elif game_type == 2: # Tame
+    elif game_type == 2:
         data = random.choice(DATA_TAMING)
         embed = discord.Embed(title="Unconscious Dino!", description=f"What does this **{data['name']}** eat to be tamed?", color=discord.Color.green())
         embed.set_image(url=data["url"])
         view = ArkTameView(data["food"], data["name"])
         msg = await channel.send(embed=embed, view=view)
         return msg
-
-    elif game_type == 3: # Craft
+    elif game_type == 3:
         data = random.choice(DATA_CRAFTING)
         embed = discord.Embed(title="Crafting Table", description=f"What is the main material for: **{data['name']}**?", color=discord.Color.orange())
         embed.set_image(url=data["url"])
         view = ArkCraftView(data["mat"])
         msg = await channel.send(embed=embed, view=view)
         return msg
-
-    elif game_type == 4: # Imprint
+    elif game_type == 4:
         img = random.choice(DATA_BREEDING_IMGS)
         embed = discord.Embed(title="Baby Rearing", description="The baby is crying. **Guess what care it needs.**", color=discord.Color.purple())
         embed.set_image(url=img)
         view = ArkImprintView()
         msg = await channel.send(embed=embed, view=view)
         return msg
-
-    elif game_type == 5: # Alpha (LEVELS)
+    elif game_type == 5:
         data = random.choice(DATA_ALPHAS)
         embed = discord.Embed(title=f"⚠️ {data['name'].upper()} DETECTED", description=f"Do you risk attacking it?\n\n🟢 **Reward:** +{data['win']} Points\n🔴 **Risk:** -{data['loss']} Points\n🎲 **Win Chance:** {int(data['chance']*100)}%", color=data['color'])
         embed.set_image(url=data["url"])
         view = ArkAlphaView(data["win"], data["loss"], data["chance"])
         msg = await channel.send(embed=embed, view=view)
         return msg
-
-    elif game_type == 6: # Pokemon
+    elif game_type == 6:
         data = random.choice(DATA_POKEMON)
         embed = discord.Embed(title="What type is this Pokémon?", description=f"Guess the type of **{data['name']}**.", color=discord.Color.gold())
         embed.set_image(url=data["url"])
@@ -655,26 +601,18 @@ async def spawn_game(channel):
 async def minigames_auto_loop():
     if not bot.is_ready(): return
     global last_minigame_message
-    
     try:
         channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
         if not channel: return
-        
-        # 1. DELETE PREVIOUS GAME (Disable buttons)
         if last_minigame_message:
-            try:
-                await last_minigame_message.edit(view=None)
-            except:
-                pass 
-
-        # 2. SEND NEW GAME
+            try: await last_minigame_message.edit(view=None)
+            except: pass 
         last_minigame_message = await spawn_game(channel)
-        
     except Exception as e:
         print(f"Error Minigame Loop: {e}")
 
 # ==========================================
-# 🏦 VAULT SYSTEM (ENGLISH)
+# 🏦 VAULT SYSTEM
 # ==========================================
 class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
@@ -686,17 +624,14 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
                 await interaction.response.send_message(f"🚫 Wait...", ephemeral=True)
                 return
         user_cooldowns[user_id] = current_time
-        
         if not vault_state["active"]:
             await interaction.response.send_message("❌ Event ended.", ephemeral=True)
             return
-            
         if self.code_input.value == vault_state["code"]:
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
             add_points_to_user(interaction.user.id, 2000)
             await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.**", ephemeral=True)
-            
             embed = discord.Embed(title="🎉 VAULT CRACKED! 🎉", description=f"{EMOJI_WINNER} Winner: {interaction.user.mention}\nCode: `{vault_state['code']}`\nReward: {vault_state['prize']}", color=0xFFD700)
             embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
             if interaction.channel: await interaction.channel.send(embed=embed)
@@ -780,11 +715,9 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     ch = bot.get_channel(VAULT_CHANNEL_ID)
     if not ch: return
     await interaction.response.defer(ephemeral=True)
-    
     embed = discord.Embed(title=f"{EMOJI_BLOOD} **VAULT DETECTED**", description=f"Crack the PIN.\nReward: {prize}", color=0x8a0404)
     embed.add_field(name="📡 LEAKED DATA", value=f"`{code[0]}###`", inline=True)
     embed.set_image(url=VAULT_IMAGE_URL)
-    
     msg = await ch.send(embed=embed, view=VaultView())
     vault_state.update({"active": True, "code": code, "prize": prize, "message_id": msg.id})
     if vault_state["hints_task"]: vault_state["hints_task"].cancel()
@@ -798,95 +731,81 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     msg = await interaction.original_response()
     await msg.add_reaction("🎉")
 
-# -------------------------------------------------------------
-# 🔥 COMANDO NUEVO: finish_polls (Anti-Lag & Detecta Flecha)
-# -------------------------------------------------------------
+# ------------------------------------------------------------------
+# 🔥 COMANDO NUEVO: finish_polls (ACTUALIZADO CON TU ID NUEVO)
+# ------------------------------------------------------------------
 @bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
 async def finish_polls(interaction: discord.Interaction):
-    # --- BLOQUE DE SEGURIDAD ANTI-LAG ---
+    # --- BLOQUE ANTI-LAG ---
     try:
-        # Ganamos tiempo (15 min) para evitar el error "Unknown Interaction"
         await interaction.response.defer(ephemeral=False)
-    except discord.errors.NotFound:
-        print("⚠️ ERROR DE LAG: Interacción caducada. Inténtalo de nuevo.")
-        return
-    except Exception as e:
-        print(f"⚠️ Error desconocido: {e}")
-        return
-    # ------------------------------------
+    except:
+        print("⚠️ Lag detectado, pero intentando continuar...")
+    # -----------------------
 
-    # 1. Verificar permisos (Usamos followup porque ya hicimos defer)
     if not interaction.user.guild_permissions.administrator:
         return await interaction.followup.send("❌ No tienes permisos.")
 
-    # 2. Obtener canal
     poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
     if not poll_channel:
         return await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.")
 
-    # --- CONFIGURACIÓN ---
-    ARROW_ID = "1211049707128750080" 
-    ARROW_FULL = "<a:hell_arrow:1211049707128750080>"
+    # --- CONFIGURACIÓN CORRECTA (TU ID) ---
+    ARROW_ID = "1334124040960610336" 
+    ARROW_FULL = "<a:hell_arrow:1334124040960610336>"
 
     valid_polls = []
     found_any = False
     
-    print("--- INICIANDO ESCANEO DE ENCUESTAS ---")
+    print(f"\n--- 🔍 INICIANDO ESCANEO ---")
 
-    # 3. LÓGICA DE DETECCIÓN INTELIGENTE
-    # Leemos 200 mensajes.
+    # Escaneamos historial
     async for message in poll_channel.history(limit=200):
         content = message.content
         if not content: continue 
 
-        # A. ¿Es una encuesta válida? (Tiene la ID de la flecha)
+        # 1. SKIP Check
+        if "-----" in content: continue
+        if message.author == bot.user: continue
+
+        # 2. DETECCIÓN (Con tu ID nuevo)
         if ARROW_ID in content:
+            print(f"✅ ENCUESTA ENCONTRADA: {content[:30]}...")
             valid_polls.append(message)
             found_any = True
-            # print(f"✅ Encuesta: {content[:15]}...") 
-
-        # B. ¿Es un separador o mensaje del bot? (LO IGNORAMOS Y SEGUIMOS)
-        elif "----" in content or message.author == bot.user:
-            continue
         
-        # C. ¿Es un mensaje normal DESPUÉS de haber encontrado encuestas?
-        # Aquí cortamos para no coger la season anterior.
+        # 3. DETECCIÓN DE FIN DE SEASON
         elif found_any:
-            print(f"🛑 Fin de season detectado. Parando escaneo.")
+            # Si ya encontramos encuestas y vemos un mensaje sin la flecha, paramos.
+            print(f"🛑 FIN DE SEASON DETECTADO.")
             break
-            
-        # D. Si aún no hemos encontrado nada, seguimos buscando
-        else:
-            continue
 
-    # Invertimos para orden cronológico
+    # Procesar resultados
     valid_polls.reverse()
     results_text = ""
     
-    # 4. PROCESAMIENTO
     for message in valid_polls:
         lines = message.content.split('\n')
-        
-        # Buscar Título
         title = None
+        
+        # BUSCAR TÍTULO
         for line in lines:
             if ARROW_ID in line:
-                # Limpieza agresiva para dejar solo el texto del título
-                title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace("*", "").replace(">", "").strip()
+                # Limpiamos usando tu ID
+                title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace(">", "").replace("*", "").replace("_", "").strip()
                 break
         
-        if not title: continue 
+        if not title: continue
 
-        # Calcular Ganador
+        # GANADOR
         winner_reaction = None
         max_votes = -1
-        
         for reaction in message.reactions:
             if reaction.count > max_votes:
                 max_votes = reaction.count
                 winner_reaction = reaction
         
-        # Extraer Texto
+        # TEXTO
         result_str = "N/A"
         if winner_reaction and max_votes > 1:
             emoji_str = str(winner_reaction.emoji)
@@ -902,22 +821,15 @@ async def finish_polls(interaction: discord.Interaction):
 
         results_text += f"> **{title}** : {result_str}\n"
 
-    # 5. ENVIAR RESULTADO
+    # ENVIAR
     if results_text:
         today_str = datetime.date.today().strftime("%Y-%m-%d")
-        
-        embed = discord.Embed(
-            title="📢 POLL RESULTS", 
-            description=f"📅 {today_str}\n\n{results_text}", 
-            color=0x990000 
-        )
+        embed = discord.Embed(title="📢 POLL RESULTS", description=f"📅 {today_str}\n\n{results_text}", color=0x990000)
         embed.set_footer(text="Hell System polls")
-        if interaction.guild.icon:
-            embed.set_thumbnail(url=interaction.guild.icon.url)
-        
+        if interaction.guild.icon: embed.set_thumbnail(url=interaction.guild.icon.url)
         await interaction.followup.send(embed=embed)
     else:
-        await interaction.followup.send("❌ No se encontraron encuestas nuevas con la flecha Hell Arrow.")
+        await interaction.followup.send("❌ No se encontraron encuestas. (Revisa consola)")
 
 # ==========================================
 # 🛡️ EVENTS
@@ -927,19 +839,12 @@ async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE: {bot.user}")
     try: await bot.tree.sync()
     except: pass
-    
-    # Start Cloud Backup Task
     bot.loop.create_task(backup_points_task())
-
-    # Start Loops
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
-    
-    # Recover Views
     bot.add_view(RolesView())
     bot.add_view(VaultView())
 
-    # HypeSquad / Support Role Check Loop
     async def check_support_roles():
         while True:
             guild = bot.guilds[0] if bot.guilds else None
@@ -952,11 +857,9 @@ async def on_ready():
                             if role not in member.roles:
                                 try: await member.add_roles(role)
                                 except: pass
-            await asyncio.sleep(60) # Check every 60s
-    
+            await asyncio.sleep(60)
     bot.loop.create_task(check_support_roles())
 
-    # Setup Shop Channel (Auto-Create/Update)
     for guild in bot.guilds:
         shop_channel = discord.utils.get(guild.text_channels, name=SHOP_CHANNEL_NAME)
         if not shop_channel:
@@ -966,15 +869,11 @@ async def on_ready():
             except: pass
         
         if shop_channel:
-            # Check last message to avoid spamming
             last_msg = None
             async for m in shop_channel.history(limit=1): last_msg = m
-            
-            # Re-post shop if last message isn't the shop menu
             is_shop_ok = False
             if last_msg and last_msg.author == bot.user and last_msg.embeds:
                 if "BLACK MARKET SHOP" in (last_msg.embeds[0].title or ""): is_shop_ok = True
-            
             if not is_shop_ok:
                 await shop_channel.purge(limit=5)
                 embed = discord.Embed(title=f"{EMOJI_REWARD} **BLACK MARKET SHOP** {EMOJI_REWARD}", color=0x9900FF)
@@ -984,15 +883,12 @@ async def on_ready():
                 embed.set_footer(text="Hell System • Economy")
                 await shop_channel.send(embed=embed)
 
-    # Setup Commands (Clean & Safe)
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
-        # Sleep to avoid Rate Limits on startup spam
         async for m in c_ch.history(limit=5):
             if m.author == bot.user:
                 await m.delete()
                 await asyncio.sleep(1.5)
-        
         embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
         embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**\n{HELL_ARROW} **/whitelistme**", inline=False)
         embed.set_footer(text="HELL SYSTEM • Commands")
@@ -1004,7 +900,6 @@ async def on_member_update(before, after):
     if not name_check: return
     role = after.guild.get_role(SUPPORT_ROLE_ID)
     if not role: return
-    
     if SUPPORT_TEXT.lower() in name_check.lower():
         if role not in after.roles:
             try: await after.add_roles(role)
@@ -1014,20 +909,15 @@ async def on_member_update(before, after):
 async def on_message(message):
     if message.author.bot:
         if message.channel.id == CMD_CHANNEL_ID:
-            # PROTECT THE HELP MENU
             if message.author == bot.user and message.embeds:
-                if "SERVER COMMANDS" in (message.embeds[0].title or ""):
-                    return # Do NOT delete
-            # Delete any other bot msg after 2 min
+                if "SERVER COMMANDS" in (message.embeds[0].title or ""): return
             await message.delete(delay=120)
         return
-
-    # --- SUGGESTION CHANNEL LOGIC ---
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if message.content.startswith(".suggest"):
             txt = message.content[8:].strip()
             if txt:
-                try: await message.delete() # Instant delete
+                try: await message.delete() 
                 except: pass
                 embed = discord.Embed(description=f"**{txt}**", color=0xffaa00)
                 embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
@@ -1035,24 +925,19 @@ async def on_message(message):
                 await msg.add_reaction(CHECK_ICON)
                 await msg.add_reaction(CROSS_ICON)
         else:
-            try: await message.delete() # Instant delete junk
+            try: await message.delete() 
             except: pass
         return
-
-    # --- COMMAND CHANNEL LOGIC ---
     if message.channel.id == CMD_CHANNEL_ID:
-        # Check if allowed command prefix OR if it's a System Message (type 20+)
         is_command = message.content.startswith(('.', '!', '/'))
         is_system = message.type != discord.MessageType.default and message.type != discord.MessageType.reply
-
         if is_command or is_system:
              await message.delete(delay=120) 
              await bot.process_commands(message)
         else:
-             try: await message.delete() # Instant delete junk
+             try: await message.delete() 
              except: pass
         return
-
     await bot.process_commands(message)
 
 if __name__ == "__main__":
