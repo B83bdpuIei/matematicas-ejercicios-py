@@ -938,16 +938,24 @@ async def on_message(message):
 # ==========================================
 @bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
 async def finish_polls(interaction: discord.Interaction):
-    # 1. DEFER INMEDIATO (Para evitar el error "Unknown Interaction")
-    # Lo ponemos ephemeral=False para que todos vean el resultado al final, 
-    # o True si solo quieres verlo tú. Tú decides.
-    await interaction.response.defer(ephemeral=False)
+    # --- BLOQUE DE SEGURIDAD ANTI-LAG ---
+    try:
+        # Esto le dice a Discord "Estoy pensando..." para ganar 15 minutos de tiempo.
+        # Si esto falla, es que la conexión va lenta o el bot se reinició justo al pulsar.
+        await interaction.response.defer(ephemeral=False)
+    except discord.errors.NotFound:
+        print("⚠️ ERROR DE LAG: La interacción caducó antes de que el bot pudiera responder. Inténtalo de nuevo.")
+        return
+    except Exception as e:
+        print(f"⚠️ Error desconocido al conectar: {e}")
+        return
+    # ------------------------------------
 
-    # 2. Verificar permisos (Usamos followup porque ya hemos hecho defer)
+    # 1. Verificar permisos (Usamos followup porque ya hicimos defer)
     if not interaction.user.guild_permissions.administrator:
         return await interaction.followup.send("❌ No tienes permisos.")
 
-    # 3. Obtener canal (Usamos variable global POLLS_CHANNEL_ID)
+    # 2. Obtener canal
     poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
     if not poll_channel:
         return await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.")
@@ -959,9 +967,10 @@ async def finish_polls(interaction: discord.Interaction):
     valid_polls = []
     found_any = False
     
-    print("--- INICIANDO ESCANEO ---")
+    print("--- INICIANDO ESCANEO DE ENCUESTAS ---")
 
-    # 4. LÓGICA DE DETECCIÓN INTELIGENTE
+    # 3. LÓGICA DE DETECCIÓN INTELIGENTE
+    # Leemos 200 mensajes. Si tienes muchas polls, sube este número a 300 o 500.
     async for message in poll_channel.history(limit=200):
         content = message.content
         if not content: continue 
@@ -970,7 +979,8 @@ async def finish_polls(interaction: discord.Interaction):
         if ARROW_ID in content:
             valid_polls.append(message)
             found_any = True
-            print(f"✅ Encuesta: {content[:15]}...")
+            # Debug limpio en consola
+            # print(f"✅ Encuesta: {content[:15]}...") 
 
         # B. ¿Es un separador o mensaje del bot? (LO IGNORAMOS Y SEGUIMOS)
         elif "----" in content or message.author == bot.user:
@@ -979,7 +989,7 @@ async def finish_polls(interaction: discord.Interaction):
         # C. ¿Es un mensaje normal DESPUÉS de haber encontrado encuestas?
         # Aquí cortamos para no coger la season anterior.
         elif found_any:
-            print(f"🛑 Fin de season detectado en: {content[:15]}")
+            print(f"🛑 Fin de season detectado. Parando escaneo.")
             break
             
         # D. Si aún no hemos encontrado nada, seguimos buscando
@@ -990,7 +1000,7 @@ async def finish_polls(interaction: discord.Interaction):
     valid_polls.reverse()
     results_text = ""
     
-    # 5. PROCESAMIENTO
+    # 4. PROCESAMIENTO
     for message in valid_polls:
         lines = message.content.split('\n')
         
@@ -1029,7 +1039,7 @@ async def finish_polls(interaction: discord.Interaction):
 
         results_text += f"> **{title}** : {result_str}\n"
 
-    # 6. ENVIAR RESULTADO
+    # 5. ENVIAR RESULTADO
     if results_text:
         today_str = datetime.date.today().strftime("%Y-%m-%d")
         
