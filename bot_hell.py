@@ -181,7 +181,9 @@ EMOJI_WINNER     = "<a:party:1450625235383488649>"
 EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
 EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
-HELL_ARROW = "<a:hell_arrow:1334124040960610336>" # ID Nuevo
+# 🔥 AQUÍ ESTÁ EL ID QUE ME CONFIRMASTE AL FINAL
+HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
+
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
@@ -305,33 +307,33 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # ==========================================
 def parse_poll_result(content, winner_emoji):
     """
-    Función auxiliar para limpiar y extraer el título y la respuesta ganadora
-    basándose en el código que me pasaste.
+    Limpia y extrae el título y la respuesta ganadora.
     """
     lines = content.split('\n')
     question = "Pregunta desconocida"
     answer = "Respuesta desconocida"
 
     # 1. Buscar Pregunta (Title)
-    # Buscamos HELL_ARROW o el símbolo >
     for line in lines:
          if "hell_arrow" in line or line.strip().startswith(">"):
-             # Limpieza agresiva del título
-             question = line.replace("<a:hell_arrow:1334124040960610336>", "").replace(">", "").replace("*", "").strip()
+             # Limpieza agresiva de cualquier formato de arrow antiguo/nuevo
+             clean_q = line.replace("<a:hell_arrow:1334124040960610336>", "") 
+             clean_q = clean_q.replace("<a:hell_arrow:1211049707128750080>", "") 
+             clean_q = clean_q.replace(">", "").replace("*", "").strip()
+             question = clean_q
              break
 
-    # 2. Buscar Respuesta asociada al emoji ganador
+    # 2. Buscar Respuesta
     s_emoji = str(winner_emoji)
     found = False
     for line in lines:
         if s_emoji in line:
-            # Quitamos el emoji para quedarnos solo con el texto
             answer = line.replace(s_emoji, "").strip()
             found = True
             break
     
     if not found: 
-        answer = s_emoji # Fallback si no encuentra el texto
+        answer = s_emoji 
     
     return question, answer
 
@@ -667,7 +669,16 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
             add_points_to_user(interaction.user.id, 2000)
             await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.**", ephemeral=True)
-            embed = discord.Embed(title="🎉 VAULT CRACKED! 🎉", description=f"{EMOJI_WINNER} Winner: {interaction.user.mention}\nCode: `{vault_state['code']}`\nReward: {vault_state['prize']}", color=0xFFD700)
+            
+            # 🔥 AQUÍ ESTÁ EL ARREGLO DEL MENSAJE DE VICTORIA
+            embed = discord.Embed(title="🎉 VAULT CRACKED! 🎉", color=0xFFD700)
+            embed.description = (
+                f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
+                f"➡️ **CODE:** `{vault_state['code']}`\n"
+                f"🎁 **LOOT:** {vault_state['prize']}\n"
+                f"{EMOJI_POINTS} **BONUS:** +2000"
+            )
+            embed.set_footer(text="HELL SYSTEM • Vault Event")
             embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
             if interaction.channel: await interaction.channel.send(embed=embed)
         else:
@@ -677,7 +688,10 @@ class VaultView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_btn")
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not vault_state["active"]: return
+        # AQUI ESTA LA CORRECCION PARA QUE NO PAREZCA ROTA
+        if not vault_state["active"]:
+             await interaction.response.send_message("❌ Event ended. (Start new one with /event_vault)", ephemeral=True)
+             return
         await interaction.response.send_modal(VaultModal())
 
 async def manage_vault_hints(channel, message, code):
@@ -767,11 +781,10 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     await msg.add_reaction("🎉")
 
 # ------------------------------------------------------------------
-# 🔥 COMANDO NUEVO: finish_polls (BASADO EN TU SNIPPET UNIDO AL CÓDIGO)
+# 🔥 COMANDO NUEVO: finish_polls (CON EL ID DE EMOJI 121104...)
 # ------------------------------------------------------------------
 @bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
-    # Anti-Crash 404 / Defer
     try:
         await interaction.response.defer()
     except:
@@ -790,11 +803,9 @@ async def finish_polls(interaction: discord.Interaction):
     count = 0
     reference_date = None
 
-    # Límite de 50 mensajes como pedía el snippet, puedes subirlo a 200 si quieres
     async for message in polls_channel.history(limit=200):
         if not message.content or not message.reactions: continue 
         
-        # Filtro inicial rápido: Si es puro separador, fuera.
         if "----" in message.content and len(message.content) < 30:
              continue
 
@@ -806,8 +817,8 @@ async def finish_polls(interaction: discord.Interaction):
         if winner_reaction.count > 1:
             question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
             
-            # --- FORMATO FINAL ---
-            # Flecha Pregunta : Respuesta
+            # --- FORMATO FINAL CORRECTO ---
+            # HELL_ARROW ya tiene el valor <a:hell_arrow:1211...>
             results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
             count += 1
 
@@ -815,7 +826,6 @@ async def finish_polls(interaction: discord.Interaction):
         await interaction.followup.send("⚠️ No encontré resultados recientes.", ephemeral=True)
         return
 
-    # --- ENVIAR ---
     MAX_LENGTH = 3500 
     header = f"📢 **POLL RESULTS**\n📅 {reference_date}\n\n"
     full_content = header + results_text
@@ -825,7 +835,6 @@ async def finish_polls(interaction: discord.Interaction):
         embed.set_footer(text="Hell System polls")
         await interaction.followup.send(embed=embed)
     else:
-        # Paginación (Chunking) por si es muy largo
         chunks = [full_content[i:i+MAX_LENGTH] for i in range(0, len(full_content), MAX_LENGTH)]
         for i, chunk in enumerate(chunks):
             embed = discord.Embed(description=chunk, color=0x990000)
