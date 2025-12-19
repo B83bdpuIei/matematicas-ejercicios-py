@@ -9,8 +9,8 @@ import re
 import time
 import json
 import traceback
-import io # Librería para manejar archivos en memoria (rápido)
-import datetime
+import io 
+import datetime # <--- AÑADIDO (Necesario para la fecha)
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -39,7 +39,7 @@ TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # IDs CHANNELS
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
-POLLS_CHANNEL_ID = 1449083865862770819      
+POLLS_CHANNEL_ID = 1449083865862770819       
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
 SUGGEST_CHANNEL_ID = 1449346646465839134
@@ -179,11 +179,11 @@ ROLES_CONFIG = {
 }
 
 EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
-EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"     
-EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"         
-EMOJI_WINNER     = "<a:party:1450625235383488649>"         
-EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"    
-EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"       
+EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"      
+EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"          
+EMOJI_WINNER     = "<a:party:1450625235383488649>"          
+EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
+EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>" 
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
@@ -798,6 +798,127 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     msg = await interaction.original_response()
     await msg.add_reaction("🎉")
 
+# -------------------------------------------------------------
+# 🔥 COMANDO NUEVO: finish_polls (Anti-Lag & Detecta Flecha)
+# -------------------------------------------------------------
+@bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
+async def finish_polls(interaction: discord.Interaction):
+    # --- BLOQUE DE SEGURIDAD ANTI-LAG ---
+    try:
+        # Ganamos tiempo (15 min) para evitar el error "Unknown Interaction"
+        await interaction.response.defer(ephemeral=False)
+    except discord.errors.NotFound:
+        print("⚠️ ERROR DE LAG: Interacción caducada. Inténtalo de nuevo.")
+        return
+    except Exception as e:
+        print(f"⚠️ Error desconocido: {e}")
+        return
+    # ------------------------------------
+
+    # 1. Verificar permisos (Usamos followup porque ya hicimos defer)
+    if not interaction.user.guild_permissions.administrator:
+        return await interaction.followup.send("❌ No tienes permisos.")
+
+    # 2. Obtener canal
+    poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
+    if not poll_channel:
+        return await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.")
+
+    # --- CONFIGURACIÓN ---
+    ARROW_ID = "1211049707128750080" 
+    ARROW_FULL = "<a:hell_arrow:1211049707128750080>"
+
+    valid_polls = []
+    found_any = False
+    
+    print("--- INICIANDO ESCANEO DE ENCUESTAS ---")
+
+    # 3. LÓGICA DE DETECCIÓN INTELIGENTE
+    # Leemos 200 mensajes.
+    async for message in poll_channel.history(limit=200):
+        content = message.content
+        if not content: continue 
+
+        # A. ¿Es una encuesta válida? (Tiene la ID de la flecha)
+        if ARROW_ID in content:
+            valid_polls.append(message)
+            found_any = True
+            # print(f"✅ Encuesta: {content[:15]}...") 
+
+        # B. ¿Es un separador o mensaje del bot? (LO IGNORAMOS Y SEGUIMOS)
+        elif "----" in content or message.author == bot.user:
+            continue
+        
+        # C. ¿Es un mensaje normal DESPUÉS de haber encontrado encuestas?
+        # Aquí cortamos para no coger la season anterior.
+        elif found_any:
+            print(f"🛑 Fin de season detectado. Parando escaneo.")
+            break
+            
+        # D. Si aún no hemos encontrado nada, seguimos buscando
+        else:
+            continue
+
+    # Invertimos para orden cronológico
+    valid_polls.reverse()
+    results_text = ""
+    
+    # 4. PROCESAMIENTO
+    for message in valid_polls:
+        lines = message.content.split('\n')
+        
+        # Buscar Título
+        title = None
+        for line in lines:
+            if ARROW_ID in line:
+                # Limpieza agresiva para dejar solo el texto del título
+                title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace("*", "").replace(">", "").strip()
+                break
+        
+        if not title: continue 
+
+        # Calcular Ganador
+        winner_reaction = None
+        max_votes = -1
+        
+        for reaction in message.reactions:
+            if reaction.count > max_votes:
+                max_votes = reaction.count
+                winner_reaction = reaction
+        
+        # Extraer Texto
+        result_str = "N/A"
+        if winner_reaction and max_votes > 1:
+            emoji_str = str(winner_reaction.emoji)
+            found = False
+            for line in lines:
+                if emoji_str in line:
+                    result_str = line.replace(emoji_str, "").strip()
+                    found = True
+                    break
+            if not found: result_str = str(winner_reaction.emoji)
+        else:
+            result_str = "Tie / No Votes"
+
+        results_text += f"> **{title}** : {result_str}\n"
+
+    # 5. ENVIAR RESULTADO
+    if results_text:
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        
+        embed = discord.Embed(
+            title="📢 POLL RESULTS", 
+            description=f"📅 {today_str}\n\n{results_text}", 
+            color=0x990000 
+        )
+        embed.set_footer(text="Hell System polls")
+        if interaction.guild.icon:
+            embed.set_thumbnail(url=interaction.guild.icon.url)
+        
+        await interaction.followup.send(embed=embed)
+    else:
+        await interaction.followup.send("❌ No se encontraron encuestas nuevas con la flecha Hell Arrow.")
+
 # ==========================================
 # 🛡️ EVENTS
 # ==========================================
@@ -933,127 +1054,6 @@ async def on_message(message):
         return
 
     await bot.process_commands(message)
-# ==========================================
-# 📊 COMANDO FINISH POLLS (Formato Season Specs)
-# ==========================================
-@bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
-async def finish_polls(interaction: discord.Interaction):
-    # --- BLOQUE DE SEGURIDAD ANTI-LAG ---
-    try:
-        # Esto le dice a Discord "Estoy pensando..." para ganar 15 minutos de tiempo.
-        # Si esto falla, es que la conexión va lenta o el bot se reinició justo al pulsar.
-        await interaction.response.defer(ephemeral=False)
-    except discord.errors.NotFound:
-        print("⚠️ ERROR DE LAG: La interacción caducó antes de que el bot pudiera responder. Inténtalo de nuevo.")
-        return
-    except Exception as e:
-        print(f"⚠️ Error desconocido al conectar: {e}")
-        return
-    # ------------------------------------
 
-    # 1. Verificar permisos (Usamos followup porque ya hicimos defer)
-    if not interaction.user.guild_permissions.administrator:
-        return await interaction.followup.send("❌ No tienes permisos.")
-
-    # 2. Obtener canal
-    poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
-    if not poll_channel:
-        return await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.")
-
-    # --- CONFIGURACIÓN ---
-    ARROW_ID = "1211049707128750080" 
-    ARROW_FULL = "<a:hell_arrow:1211049707128750080>"
-
-    valid_polls = []
-    found_any = False
-    
-    print("--- INICIANDO ESCANEO DE ENCUESTAS ---")
-
-    # 3. LÓGICA DE DETECCIÓN INTELIGENTE
-    # Leemos 200 mensajes. Si tienes muchas polls, sube este número a 300 o 500.
-    async for message in poll_channel.history(limit=200):
-        content = message.content
-        if not content: continue 
-
-        # A. ¿Es una encuesta válida? (Tiene la ID de la flecha)
-        if ARROW_ID in content:
-            valid_polls.append(message)
-            found_any = True
-            # Debug limpio en consola
-            # print(f"✅ Encuesta: {content[:15]}...") 
-
-        # B. ¿Es un separador o mensaje del bot? (LO IGNORAMOS Y SEGUIMOS)
-        elif "----" in content or message.author == bot.user:
-            continue
-        
-        # C. ¿Es un mensaje normal DESPUÉS de haber encontrado encuestas?
-        # Aquí cortamos para no coger la season anterior.
-        elif found_any:
-            print(f"🛑 Fin de season detectado. Parando escaneo.")
-            break
-            
-        # D. Si aún no hemos encontrado nada, seguimos buscando
-        else:
-            continue
-
-    # Invertimos para orden cronológico
-    valid_polls.reverse()
-    results_text = ""
-    
-    # 4. PROCESAMIENTO
-    for message in valid_polls:
-        lines = message.content.split('\n')
-        
-        # Buscar Título
-        title = None
-        for line in lines:
-            if ARROW_ID in line:
-                # Limpieza agresiva para dejar solo el texto del título
-                title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace("*", "").replace(">", "").strip()
-                break
-        
-        if not title: continue 
-
-        # Calcular Ganador
-        winner_reaction = None
-        max_votes = -1
-        
-        for reaction in message.reactions:
-            if reaction.count > max_votes:
-                max_votes = reaction.count
-                winner_reaction = reaction
-        
-        # Extraer Texto
-        result_str = "N/A"
-        if winner_reaction and max_votes > 1:
-            emoji_str = str(winner_reaction.emoji)
-            found = False
-            for line in lines:
-                if emoji_str in line:
-                    result_str = line.replace(emoji_str, "").strip()
-                    found = True
-                    break
-            if not found: result_str = str(winner_reaction.emoji)
-        else:
-            result_str = "Tie / No Votes"
-
-        results_text += f"> **{title}** : {result_str}\n"
-
-    # 5. ENVIAR RESULTADO
-    if results_text:
-        today_str = datetime.date.today().strftime("%Y-%m-%d")
-        
-        embed = discord.Embed(
-            title="📢 POLL RESULTS", 
-            description=f"📅 {today_str}\n\n{results_text}", 
-            color=0x990000 
-        )
-        embed.set_footer(text="Hell System polls")
-        if interaction.guild.icon:
-            embed.set_thumbnail(url=interaction.guild.icon.url)
-        
-        await interaction.followup.send(embed=embed)
-    else:
-        await interaction.followup.send("❌ No se encontraron encuestas nuevas con la flecha Hell Arrow.")
 if __name__ == "__main__":
     if TOKEN: bot.run(TOKEN)
