@@ -14,7 +14,7 @@ import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (Para Render/Hosts)
+# 🚑 FAKE WEB SERVER
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -38,7 +38,7 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # IDs CHANNELS
-GIVEAWAY_CHANNEL_ID = 1449849645495746803 # Canal de Sponsors
+GIVEAWAY_CHANNEL_ID = 1449849645495746803 
 POLLS_CHANNEL_ID = 1449083865862770819       
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
@@ -57,7 +57,6 @@ SHOP_CHANNEL_NAME = "「🔥」hell-store"
 # ==========================================
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
-# Emojis Generales
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
@@ -65,7 +64,6 @@ CROSS_ICON = "<a:cruz_hell:1450255934273355918>"
 EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
 EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
 
-# Emojis Minijuegos/Economía
 EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
 EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"      
 EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"          
@@ -73,12 +71,12 @@ EMOJI_WINNER     = "<a:party:1450625235383488649>"
 EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
 EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
-# 🔥 EMOJIS NUEVOS (VAULT & GIVEAWAY) 🔥
-EMOJI_PARTY_NEW = "<a:party:1137005680520331304>" # Para el título del Vault y reacción Giveaway
-EMOJI_VAULT_WINNER_ICON = "<a:emoji_69:1328804255741771899>" # Diamante morado
-EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>" # Para Loot del Vault y Prize del Giveaway
-EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>" # Fuego para título Giveaway Sponsor
-EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>" # Reloj para Giveaway
+EMOJI_PARTY_NEW = "<a:party:1137005680520331304>"
+EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>"
+EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>"
+EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>"
+EMOJI_VAULT_WINNER_CROWN = "<a:yelow_crown:1219625559747858523>"
+EMOJI_VAULT_CODE_ICON = "<a:emoji_69:1328804255741771899>"
 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
@@ -238,6 +236,7 @@ vault_state = {
 }
 user_cooldowns = {} 
 last_minigame_message = None 
+last_dino_message = None # VARIABLE NUEVA PARA DINO
 
 # --- RAM DATABASE & CLOUD SYNC ---
 points_data = {} 
@@ -314,24 +313,16 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # 🧩 HELPER FUNCTIONS
 # ==========================================
 def parse_poll_result(content, winner_emoji):
-    """
-    Limpia y extrae el título y la respuesta ganadora.
-    """
     lines = content.split('\n')
     question = "Pregunta desconocida"
     answer = "Respuesta desconocida"
-
-    # 1. Buscar Pregunta (Title)
     for line in lines:
          if "hell_arrow" in line or line.strip().startswith(">"):
-             # Limpieza agresiva de cualquier formato de arrow antiguo/nuevo
              clean_q = line.replace("<a:hell_arrow:1334124040960610336>", "") 
              clean_q = clean_q.replace("<a:hell_arrow:1211049707128750080>", "") 
              clean_q = clean_q.replace(">", "").replace("*", "").strip()
              question = clean_q
              break
-
-    # 2. Buscar Respuesta
     s_emoji = str(winner_emoji)
     found = False
     for line in lines:
@@ -339,10 +330,7 @@ def parse_poll_result(content, winner_emoji):
             answer = line.replace(s_emoji, "").strip()
             found = True
             break
-    
-    if not found: 
-        answer = s_emoji 
-    
+    if not found: answer = s_emoji 
     return question, answer
 
 # ==========================================
@@ -378,6 +366,8 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             )
             embed.set_footer(text="Hell System • Dino Games")
             if interaction.channel: await interaction.channel.send(embed=embed)
+            
+            # 🔥 BLOQUEAR BOTÓN AL GANAR
             try:
                 view = self.view_ref 
                 for child in view.children: child.disabled = True
@@ -405,9 +395,16 @@ class DinoView(discord.ui.View):
 @tasks.loop(minutes=20)
 async def dino_game_loop():
     if not bot.is_ready(): return
+    global last_dino_message
     try:
         channel = bot.get_channel(DINO_CHANNEL_ID)
         if not channel: return
+        
+        # 🔥 LIMPIEZA DE DINO ANTERIOR
+        if last_dino_message:
+            try: await last_dino_message.edit(view=None)
+            except: pass
+
         dino_real_name = random.choice(ARK_DINOS)
         char_list = list(dino_real_name.upper())
         random.shuffle(char_list)
@@ -424,7 +421,7 @@ async def dino_game_loop():
         )
         embed.set_footer(text="Hell System • Dino Games")
         view = DinoView(correct_dino=dino_real_name)
-        await channel.send(embed=embed, view=view)
+        last_dino_message = await channel.send(embed=embed, view=view)
     except Exception as e:
         print(f"Error in Dino Loop: {e}")
 
@@ -649,9 +646,12 @@ async def minigames_auto_loop():
     try:
         channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
         if not channel: return
+        
+        # 🔥 LIMPIEZA DE MINIJUEGO ANTERIOR
         if last_minigame_message:
             try: await last_minigame_message.edit(view=None)
             except: pass 
+        
         last_minigame_message = await spawn_game(channel)
     except Exception as e:
         print(f"Error Minigame Loop: {e}")
@@ -678,11 +678,10 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             add_points_to_user(interaction.user.id, 2000)
             await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.**", ephemeral=True)
             
-            # 🔥 ARREGLO DEL MENSAJE DE VICTORIA CON TUS EMOJIS 🔥
             embed = discord.Embed(title=f"{EMOJI_PARTY_NEW} VAULT CRACKED! {EMOJI_PARTY_NEW}", color=0xFFD700)
             embed.description = (
-                f"{EMOJI_VAULT_WINNER_ICON} **WINNER:** {interaction.user.mention}\n"
-                f"➡️ **CODE:** `{vault_state['code']}`\n"
+                f"{EMOJI_VAULT_WINNER_CROWN} **WINNER:** {interaction.user.mention}\n"
+                f"{EMOJI_VAULT_CODE_ICON} **CODE:** `{vault_state['code']}`\n"
                 f"{EMOJI_GIFT_NEW} **LOOT:** {vault_state['prize']}\n"
                 f"{EMOJI_POINTS} **BONUS:** +2000"
             )
@@ -763,7 +762,10 @@ async def check_points(ctx):
 
 @bot.command(name="recipes")
 async def show_recipes(ctx):
-    await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Recipes image here)*")
+    # La respuesta del bot se borra sola a los 120s si está en el canal de comandos,
+    # pero aquí forzamos que se vea
+    msg = await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Recipes image here)*")
+    # Este mensaje se gestiona en el on_message si es canal de comandos
 
 @bot.tree.command(name="event_vault")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
@@ -780,30 +782,23 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(ch, msg, code))
     await interaction.followup.send("✅ Started")
 
-# ------------------------------------------------------------------
-# 🔥 COMANDO NUEVO: start_giveaway (LÓGICA SPONSOR + EMOJIS NUEVOS)
-# ------------------------------------------------------------------
 @bot.tree.command(name="start_giveaway")
 async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
 
-    # Lógica de canal (Sponsor vs Normal)
     is_sponsor_channel = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
     
     if is_sponsor_channel:
-        # Formato Sponsor (Rojo, Fuego, Advertencia)
         embed_color = 0x990000
         embed_title = f"{EMOJI_FIRE_ANIM} HELL SPONSOR GIVEAWAY {EMOJI_FIRE_ANIM}"
         footer_text = "⚠️ ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick"
     else:
-        # Formato Normal (Verde, Simple)
         embed_color = 0x00FF00
         embed_title = f"{EMOJI_PARTY_NEW} GIVEAWAY"
         footer_text = "Hell System • Giveaway"
 
-    # Construir descripción con nuevos emojis
     description = (
         f"{EMOJI_GIFT_NEW} **Prize:** {premio}\n"
         f"{EMOJI_CLOCK_NEW} **Time:** {tiempo}\n\n"
@@ -815,12 +810,8 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     
     await interaction.response.send_message(embed=embed)
     msg = await interaction.original_response()
-    # Reacción con el emoji de fiesta nuevo
     await msg.add_reaction(EMOJI_PARTY_NEW)
 
-# ------------------------------------------------------------------
-# 🔥 COMANDO NUEVO: finish_polls (CON NEGRITAS Y ID CORRECTO)
-# ------------------------------------------------------------------
 @bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
     try:
@@ -843,9 +834,7 @@ async def finish_polls(interaction: discord.Interaction):
 
     async for message in polls_channel.history(limit=200):
         if not message.content or not message.reactions: continue 
-        
-        if "----" in message.content and len(message.content) < 30:
-             continue
+        if "----" in message.content and len(message.content) < 30: continue
 
         msg_date = message.created_at.date()
         if reference_date is None: reference_date = msg_date
@@ -854,8 +843,6 @@ async def finish_polls(interaction: discord.Interaction):
 
         if winner_reaction.count > 1:
             question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
-            
-            # --- FORMATO FINAL CON NEGRITAS (**) Y EMOJI CORRECTO ---
             results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
             count += 1
 
@@ -892,7 +879,6 @@ async def on_ready():
     bot.add_view(RolesView())
     bot.add_view(VaultView())
 
-    # SISTEMA HYPESQUAD / SUPPORT ROLE (Confirmado que funciona)
     async def check_support_roles():
         while True:
             guild = bot.guilds[0] if bot.guilds else None
@@ -905,6 +891,10 @@ async def on_ready():
                             if role not in member.roles:
                                 try: await member.add_roles(role)
                                 except: pass
+                        else:
+                            if role in member.roles:
+                                try: await member.remove_roles(role)
+                                except: pass
             await asyncio.sleep(60)
     bot.loop.create_task(check_support_roles())
 
@@ -915,7 +905,6 @@ async def on_ready():
                 overwrites = {guild.default_role: discord.PermissionOverwrite(send_messages=False), guild.me: discord.PermissionOverwrite(send_messages=True)}
                 shop_channel = await guild.create_text_channel(SHOP_CHANNEL_NAME, overwrites=overwrites)
             except: pass
-        
         if shop_channel:
             last_msg = None
             async for m in shop_channel.history(limit=1): last_msg = m
@@ -931,37 +920,66 @@ async def on_ready():
                 embed.set_footer(text="Hell System • Economy")
                 await shop_channel.send(embed=embed)
 
+    # 🔥 LIMPIEZA DE CHAT DE COMANDOS (NO SPAM AL REINICIAR) 🔥
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
-        async for m in c_ch.history(limit=5):
+        # Borra mensajes viejos del bot para limpiar
+        async for m in c_ch.history(limit=10):
             if m.author == bot.user:
-                await m.delete()
-                await asyncio.sleep(1.5)
-        embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
-        embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**\n{HELL_ARROW} **/whitelistme**", inline=False)
-        embed.set_footer(text="HELL SYSTEM • Commands")
-        await c_ch.send(embed=embed)
+                # Si es el menú de comandos, NO lo borramos y marcamos que ya existe
+                if m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
+                    pass 
+                else:
+                    await m.delete() # Borra basura vieja
+                    
+        # Verificar si el menú ya existe
+        menu_exists = False
+        async for m in c_ch.history(limit=10):
+             if m.author == bot.user and m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
+                 menu_exists = True
+                 break
+        
+        # Solo enviamos si no existe
+        if not menu_exists:
+            embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
+            embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**\n{HELL_ARROW} **/whitelistme**", inline=False)
+            embed.set_footer(text="HELL SYSTEM • Commands")
+            await c_ch.send(embed=embed)
 
 @bot.event
 async def on_member_update(before, after):
-    # SISTEMA HYPESQUAD / SUPPORT ROLE (Check instantáneo al cambiar nombre)
     name_check = after.global_name if after.global_name else after.name
     if not name_check: return
     role = after.guild.get_role(SUPPORT_ROLE_ID)
     if not role: return
+
     if SUPPORT_TEXT.lower() in name_check.lower():
         if role not in after.roles:
             try: await after.add_roles(role)
             except: pass
+    else:
+        if role in after.roles:
+            try: await after.remove_roles(role)
+            except: pass
+            try:
+                ga_channel = after.guild.get_channel(GIVEAWAY_CHANNEL_ID)
+                if ga_channel:
+                    async for msg in ga_channel.history(limit=10):
+                        await msg.remove_reaction(EMOJI_PARTY_NEW, after)
+            except: pass
 
 @bot.event
 async def on_message(message):
-    if message.author.bot:
+    # Ignorar mensajes del propio bot
+    if message.author == bot.user:
+        # Si es el canal de comandos, borramos mensajes del bot (excepto el menú) a los 2 mins
         if message.channel.id == CMD_CHANNEL_ID:
-            if message.author == bot.user and message.embeds:
-                if "SERVER COMMANDS" in (message.embeds[0].title or ""): return
+            if message.embeds and "SERVER COMMANDS" in (message.embeds[0].title or ""):
+                return # NO BORRAR EL MENU
             await message.delete(delay=120)
         return
+
+    # Logica Sugerencias
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if message.content.startswith(".suggest"):
             txt = message.content[8:].strip()
@@ -977,16 +995,24 @@ async def on_message(message):
             try: await message.delete() 
             except: pass
         return
+
+    # 🔥 LOGICA DE LIMPIEZA EN CANAL COMANDOS 🔥
     if message.channel.id == CMD_CHANNEL_ID:
+        # Detectar si es comando (! . /)
         is_command = message.content.startswith(('.', '!', '/'))
-        is_system = message.type != discord.MessageType.default and message.type != discord.MessageType.reply
-        if is_command or is_system:
-             await message.delete(delay=120) 
+        
+        if is_command:
+             # Borrar INSTANTANEAMENTE el comando del usuario
+             try: await message.delete()
+             except: pass
+             # Procesar el comando
              await bot.process_commands(message)
         else:
+             # Si es texto basura (no comando), borrar también
              try: await message.delete() 
              except: pass
         return
+
     await bot.process_commands(message)
 
 if __name__ == "__main__":
