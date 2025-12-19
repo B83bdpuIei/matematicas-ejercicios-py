@@ -10,7 +10,7 @@ import time
 import json
 import traceback
 import io 
-import datetime # Importante para la fecha
+import datetime 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
@@ -181,7 +181,7 @@ EMOJI_WINNER     = "<a:party:1450625235383488649>"
 EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
 EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
-HELL_ARROW = "<a:hell_arrow:1211049707128750080>" # (Esta es la variable antigua, pero el comando usa la nueva dentro)
+HELL_ARROW = "<a:hell_arrow:1334124040960610336>" # ID Nuevo
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
 CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
@@ -299,6 +299,41 @@ intents.reactions = True
 intents.presences = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+# ==========================================
+# 🧩 HELPER FUNCTIONS
+# ==========================================
+def parse_poll_result(content, winner_emoji):
+    """
+    Función auxiliar para limpiar y extraer el título y la respuesta ganadora
+    basándose en el código que me pasaste.
+    """
+    lines = content.split('\n')
+    question = "Pregunta desconocida"
+    answer = "Respuesta desconocida"
+
+    # 1. Buscar Pregunta (Title)
+    # Buscamos HELL_ARROW o el símbolo >
+    for line in lines:
+         if "hell_arrow" in line or line.strip().startswith(">"):
+             # Limpieza agresiva del título
+             question = line.replace("<a:hell_arrow:1334124040960610336>", "").replace(">", "").replace("*", "").strip()
+             break
+
+    # 2. Buscar Respuesta asociada al emoji ganador
+    s_emoji = str(winner_emoji)
+    found = False
+    for line in lines:
+        if s_emoji in line:
+            # Quitamos el emoji para quedarnos solo con el texto
+            answer = line.replace(s_emoji, "").strip()
+            found = True
+            break
+    
+    if not found: 
+        answer = s_emoji # Fallback si no encuentra el texto
+    
+    return question, answer
 
 # ==========================================
 # 🦖 MINIGAME: WHO IS THE DINO
@@ -732,104 +767,70 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
     await msg.add_reaction("🎉")
 
 # ------------------------------------------------------------------
-# 🔥 COMANDO NUEVO: finish_polls (ACTUALIZADO CON TU ID NUEVO)
+# 🔥 COMANDO NUEVO: finish_polls (BASADO EN TU SNIPPET UNIDO AL CÓDIGO)
 # ------------------------------------------------------------------
-@bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
+@bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
-    # --- BLOQUE ANTI-LAG ---
+    # Anti-Crash 404 / Defer
     try:
-        await interaction.response.defer(ephemeral=False)
+        await interaction.response.defer()
     except:
-        print("⚠️ Lag detectado, pero intentando continuar...")
-    # -----------------------
+        return 
 
     if not interaction.user.guild_permissions.administrator:
-        return await interaction.followup.send("❌ No tienes permisos.")
+        await interaction.followup.send("❌ No tienes permisos.", ephemeral=True)
+        return
 
-    poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
-    if not poll_channel:
-        return await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.")
+    polls_channel = bot.get_channel(POLLS_CHANNEL_ID)
+    if not polls_channel:
+        await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.", ephemeral=True)
+        return
 
-    # --- CONFIGURACIÓN CORRECTA (TU ID) ---
-    ARROW_ID = "1334124040960610336" 
-    ARROW_FULL = "<a:hell_arrow:1334124040960610336>"
-
-    valid_polls = []
-    found_any = False
-    
-    print(f"\n--- 🔍 INICIANDO ESCANEO ---")
-
-    # Escaneamos historial
-    async for message in poll_channel.history(limit=200):
-        content = message.content
-        if not content: continue 
-
-        # 1. SKIP Check
-        if "-----" in content: continue
-        if message.author == bot.user: continue
-
-        # 2. DETECCIÓN (Con tu ID nuevo)
-        if ARROW_ID in content:
-            print(f"✅ ENCUESTA ENCONTRADA: {content[:30]}...")
-            valid_polls.append(message)
-            found_any = True
-        
-        # 3. DETECCIÓN DE FIN DE SEASON
-        elif found_any:
-            # Si ya encontramos encuestas y vemos un mensaje sin la flecha, paramos.
-            print(f"🛑 FIN DE SEASON DETECTADO.")
-            break
-
-    # Procesar resultados
-    valid_polls.reverse()
     results_text = ""
-    
-    for message in valid_polls:
-        lines = message.content.split('\n')
-        title = None
-        
-        # BUSCAR TÍTULO
-        for line in lines:
-            if ARROW_ID in line:
-                # Limpiamos usando tu ID
-                title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace(">", "").replace("*", "").replace("_", "").strip()
-                break
-        
-        if not title: continue
+    count = 0
+    reference_date = None
 
-        # GANADOR
-        winner_reaction = None
-        max_votes = -1
-        for reaction in message.reactions:
-            if reaction.count > max_votes:
-                max_votes = reaction.count
-                winner_reaction = reaction
+    # Límite de 50 mensajes como pedía el snippet, puedes subirlo a 200 si quieres
+    async for message in polls_channel.history(limit=200):
+        if not message.content or not message.reactions: continue 
         
-        # TEXTO
-        result_str = "N/A"
-        if winner_reaction and max_votes > 1:
-            emoji_str = str(winner_reaction.emoji)
-            found = False
-            for line in lines:
-                if emoji_str in line:
-                    result_str = line.replace(emoji_str, "").strip()
-                    found = True
-                    break
-            if not found: result_str = str(winner_reaction.emoji)
-        else:
-            result_str = "Tie / No Votes"
+        # Filtro inicial rápido: Si es puro separador, fuera.
+        if "----" in message.content and len(message.content) < 30:
+             continue
 
-        results_text += f"> **{title}** : {result_str}\n"
+        msg_date = message.created_at.date()
+        if reference_date is None: reference_date = msg_date
 
-    # ENVIAR
-    if results_text:
-        today_str = datetime.date.today().strftime("%Y-%m-%d")
-        embed = discord.Embed(title="📢 POLL RESULTS", description=f"📅 {today_str}\n\n{results_text}", color=0x990000)
+        winner_reaction = max(message.reactions, key=lambda r: r.count)
+
+        if winner_reaction.count > 1:
+            question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
+            
+            # --- FORMATO FINAL ---
+            # Flecha Pregunta : Respuesta
+            results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
+            count += 1
+
+    if count == 0:
+        await interaction.followup.send("⚠️ No encontré resultados recientes.", ephemeral=True)
+        return
+
+    # --- ENVIAR ---
+    MAX_LENGTH = 3500 
+    header = f"📢 **POLL RESULTS**\n📅 {reference_date}\n\n"
+    full_content = header + results_text
+
+    if len(full_content) <= MAX_LENGTH:
+        embed = discord.Embed(description=full_content, color=0x990000)
         embed.set_footer(text="Hell System polls")
-        if interaction.guild.icon: embed.set_thumbnail(url=interaction.guild.icon.url)
         await interaction.followup.send(embed=embed)
     else:
-        await interaction.followup.send("❌ No se encontraron encuestas. (Revisa consola)")
+        # Paginación (Chunking) por si es muy largo
+        chunks = [full_content[i:i+MAX_LENGTH] for i in range(0, len(full_content), MAX_LENGTH)]
+        for i, chunk in enumerate(chunks):
+            embed = discord.Embed(description=chunk, color=0x990000)
+            embed.set_footer(text=f"Page {i+1} • Hell System")
+            await interaction.followup.send(embed=embed)
 
 # ==========================================
 # 🛡️ EVENTS
