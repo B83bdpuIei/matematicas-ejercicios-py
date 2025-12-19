@@ -942,60 +942,68 @@ async def finish_polls(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         return await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
 
-    # 2. Obtener canal de encuestas
+    # 2. Obtener canal
     poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
     if not poll_channel:
-        return await interaction.response.send_message("❌ Canal no encontrado (Revisa POLLS_CHANNEL_ID).", ephemeral=True)
+        return await interaction.response.send_message("❌ Canal no encontrado.", ephemeral=True)
 
     await interaction.response.defer()
 
-    # --- CONFIGURACIÓN ---
-    # La flecha que usa el bot para detectar si es una encuesta válida
-    HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
-    
+    # ID de la flecha (más seguro que el string completo)
+    ARROW_ID = "1211049707128750080" 
+    # String completo para limpiar el título luego
+    ARROW_FULL = "<a:hell_arrow:1211049707128750080>"
+
     valid_polls = []
+    found_any = False
     
-    # 3. LÓGICA DE DETECCIÓN INTELIGENTE (BLOQUE DE SEASON)
-    # Leemos desde el mensaje más nuevo hacia atrás
+    print("--- INICIANDO ESCANEO ---")
+
+    # 3. LÓGICA DE DETECCIÓN INTELIGENTE
     async for message in poll_channel.history(limit=200):
-        if not message.content: 
-            continue # Saltamos si no tiene texto (solo imagen)
+        content = message.content
+        if not content: continue 
 
-        # SI TIENE LA FLECHA -> ES UNA ENCUESTA DE ESTA SEASON
-        if HELL_ARROW in message.content:
+        # A. ¿Es una encuesta válida? (Tiene la ID de la flecha)
+        if ARROW_ID in content:
             valid_polls.append(message)
-        
-        # SI NO TIENE LA FLECHA -> SE ACABÓ EL BLOQUE, PARAMOS
-        # (Esto evita que coja encuestas de la season anterior o mensajes viejos)
-        else:
-            # Opcional: Si el mensaje es del propio bot ejecutando el comando, lo ignoramos y seguimos
-            if message.author == bot.user and message.embeds and "POLL RESULTS" in (message.embeds[0].title or ""):
-                continue
-            
-            # Si encontramos cualquier otro mensaje que rompa la racha (separador, chat, season vieja), CORTAMOS.
-            # print(f"Parada por mensaje sin flecha: {message.content[:20]}...") # Debug
-            break
-    
-    # Invertimos la lista para procesarlas en orden cronológico (de la primera que se puso a la última)
-    valid_polls.reverse()
+            found_any = True
+            print(f"✅ Encuesta detectada: {content[:20]}...")
 
+        # B. ¿Es un separador o mensaje del bot? (LO IGNORAMOS Y SEGUIMOS)
+        elif "----" in content or message.author == bot.user:
+            continue
+        
+        # C. ¿Es un mensaje random DEPUÉS de haber encontrado encuestas?
+        # Solo paramos si ya hemos encontrado alguna encuesta y de repente vemos texto normal (fin de season)
+        elif found_any:
+            print(f"🛑 Fin de bloque detectado en: {content[:20]}")
+            break
+            
+        # D. Si aún no hemos encontrado nada y vemos texto random, seguimos buscando un poco más
+        # por si hay charla antes de la primera encuesta.
+        else:
+            continue
+
+    # Invertimos para orden cronológico
+    valid_polls.reverse()
     results_text = ""
     
-    # 4. PROCESAMIENTO DE GANADORES
+    # 4. PROCESAMIENTO
     for message in valid_polls:
         lines = message.content.split('\n')
         
-        # A. Extraer Título (Quitando la flecha animada)
+        # Buscar Título
         title = None
         for line in lines:
-            if HELL_ARROW in line:
-                # Quitamos la flecha y limpiamos espacios y markdown extra
-                title = line.replace(HELL_ARROW, "").replace("*", "").replace(">", "").strip()
+            if ARROW_ID in line:
+                # Limpiamos usando el ID o el string común
+                title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace("*", "").replace(">", "").strip()
                 break
         
         if not title: continue 
 
-        # B. Calcular Ganador
+        # Calcular Ganador
         winner_reaction = None
         max_votes = -1
         
@@ -1004,29 +1012,20 @@ async def finish_polls(interaction: discord.Interaction):
                 max_votes = reaction.count
                 winner_reaction = reaction
         
-        # C. Extraer Texto de la Opción Ganadora
+        # Extraer Texto
         result_str = "N/A"
-
         if winner_reaction and max_votes > 1:
             emoji_str = str(winner_reaction.emoji)
             found = False
-            
-            # Buscamos la línea que tiene el emoji ganador
             for line in lines:
                 if emoji_str in line:
-                    # Copiamos la línea quitando el emoji
                     result_str = line.replace(emoji_str, "").strip()
                     found = True
                     break
-            
-            # Si no encuentra el texto, pone el emoji como respaldo
-            if not found:
-                result_str = str(winner_reaction.emoji)
+            if not found: result_str = str(winner_reaction.emoji)
         else:
             result_str = "Tie / No Votes"
 
-        # D. Formato Final para el Embed
-        # Usamos la flecha roja estática (>) para el resultado, como en la foto
         results_text += f"> **{title}** : {result_str}\n"
 
     # 5. ENVIAR EMBED
@@ -1038,13 +1037,12 @@ async def finish_polls(interaction: discord.Interaction):
             description=f"📅 {today_str}\n\n{results_text}", 
             color=0x990000 
         )
-        embed.set_footer(text="Hell System polls") # Footer solicitado
-        
+        embed.set_footer(text="Hell System polls")
         if interaction.guild.icon:
             embed.set_thumbnail(url=interaction.guild.icon.url)
         
         await interaction.followup.send(embed=embed)
     else:
-        await interaction.followup.send("❌ No se encontraron encuestas recientes con la flecha Hell Arrow.")
+        await interaction.followup.send("❌ No se encontraron encuestas. (Mira la consola para ver detalles).")
 if __name__ == "__main__":
     if TOKEN: bot.run(TOKEN)
