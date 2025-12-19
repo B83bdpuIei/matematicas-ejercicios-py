@@ -38,6 +38,7 @@ TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # IDs CHANNELS
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 # Canal ROJO (Support)
+POLLS_CHANNEL_ID = 1449083865862770819      
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
 SUGGEST_CHANNEL_ID = 1449346646465839134
@@ -58,6 +59,7 @@ SUPPORT_ROLE_ID = 1336477737594130482
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 EMOJI_C4 = "<:C4_HELL:1451357075321131049>"
 
+# 1. RAID MASTER
 DATA_RAID = [
     {"name": "Metal Wall", "c4": "4", "img": "https://ark.wiki.gg/images/3/3b/Metal_Wall.png"},
     {"name": "Stone Wall", "c4": "2", "img": "https://ark.wiki.gg/images/b/b9/Stone_Wall.png"},
@@ -81,6 +83,7 @@ DATA_RAID = [
     {"name": "Large Crop Plot", "c4": "1", "img": "https://ark.wiki.gg/images/9/9e/Large_Crop_Plot.png"}
 ]
 
+# 2. GEOGUESSER
 DATA_GEO = [
     {"map": "Aberration", "hint": "Radioactive / Pink", "img": "https://ark.wiki.gg/images/thumb/3/30/The_Surface_%28Aberration%29.jpg/400px-The_Surface_%28Aberration%29.jpg"},
     {"map": "The Island", "hint": "The Volcano", "img": "https://ark.wiki.gg/images/thumb/3/3f/Volcano.jpg/400px-Volcano.jpg"},
@@ -104,6 +107,7 @@ DATA_GEO = [
     {"map": "Fjordur", "hint": "Mines of Moria", "img": "https://ark.wiki.gg/images/thumb/e/e3/Mines_of_Moria_%28Fjordur%29.jpg/400px-Mines_of_Moria_%28Fjordur%29.jpg"}
 ]
 
+# 3. DINO TRAINER
 DATA_TAME_TRICKY = [
     {"name": "Rex", "method": "Knockout", "img": "https://ark.wiki.gg/images/0/03/Rex.png"},
     {"name": "Giganotosaurus", "method": "Knockout", "img": "https://ark.wiki.gg/images/9/9e/Giganotosaurus.png"},
@@ -122,6 +126,7 @@ DATA_TAME_TRICKY = [
     {"name": "Noglin", "method": "Passive", "img": "https://ark.wiki.gg/images/c/c2/Noglin.png"},
 ]
 
+# 4. POKEMON
 DATA_POKEMON_TRICKY = [
     {"name": "Sudowoodo", "type": "Rock", "ban": ["Grass"], "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/185.png"}, 
     {"name": "Lugia", "type": "Psychic", "ban": ["Water", "Flying"], "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/249.png"}, 
@@ -145,6 +150,7 @@ DATA_POKEMON_TRICKY = [
     {"name": "Luxray", "type": "Electric", "ban": ["Dark"], "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/405.png"},
 ]
 
+# 5. CRAFTING
 DATA_CRAFTING = [
     {"url": "https://ark.wiki.gg/images/9/9a/Metal_Ingot.png", "mat": "Metal", "name": "Metal Ingot"},
     {"url": "https://ark.wiki.gg/images/3/30/Flak_Chestpiece.png", "mat": "Metal", "name": "Flak Chestpiece"},
@@ -168,6 +174,7 @@ DATA_CRAFTING = [
     {"url": "https://ark.wiki.gg/images/3/37/Advanced_Rifle_Bullet.png", "mat": "Advanced", "name": "Adv. Rifle Bullet"},
 ]
 
+# 6. BREEDING
 DATA_BREEDING_IMGS = [
     "https://ark.wiki.gg/images/e/e3/Fertilized_Rex_Egg.png",
     "https://ark.wiki.gg/images/5/5d/Fertilized_Giganotosaurus_Egg.png",
@@ -191,6 +198,7 @@ DATA_BREEDING_IMGS = [
     "https://ark.wiki.gg/images/3/39/Fertilized_Magmasaur_Egg.png"
 ]
 
+# 7. ALPHA LEVELS
 DATA_ALPHAS = [
     {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
     {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
@@ -312,13 +320,13 @@ async def backup_points_task():
                             await msg.delete()
                 except: pass
         except: pass
-
-# ==========================================
+            # ==========================================
 # ⚙️ SETUP
 # ==========================================
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
+intents.reactions = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
@@ -719,6 +727,7 @@ async def check_giveaways():
                 winner_count = min(len(users), data["winners"])
                 winners = random.sample(users, winner_count)
                 winner_mentions = ", ".join([w.mention for w in winners])
+                
                 await channel.send(f"🎉 **GIVEAWAY ENDED** 🎉\nPrize: **{data['prize']}**\nWinners: {winner_mentions}")
             else:
                 await channel.send(f"🎉 **GIVEAWAY ENDED**\nPrize: {data['prize']}\nNo valid winners.")
@@ -760,6 +769,42 @@ async def start_giveaway(interaction: discord.Interaction, time_str: str, winner
         "prize": prize,
         "channel_id": target_channel.id
     }
+    # ==========================================
+# 📊 POLL SYSTEM
+# ==========================================
+@bot.tree.command(name="poll")
+async def poll(interaction: discord.Interaction, question: str):
+    if not interaction.user.guild_permissions.administrator: return
+    channel = bot.get_channel(POLLS_CHANNEL_ID)
+    if not channel: return
+    
+    embed = discord.Embed(title="📊 **COMMUNITY POLL**", description=f"**{question}**", color=0x00FFFF)
+    embed.set_footer(text="React to vote!")
+    
+    await interaction.response.send_message("Poll created.", ephemeral=True)
+    msg = await channel.send(embed=embed)
+    await msg.add_reaction("✅")
+    await msg.add_reaction("❌")
+
+@bot.tree.command(name="end_poll")
+async def end_poll(interaction: discord.Interaction, message_id: str):
+    if not interaction.user.guild_permissions.administrator: return
+    channel = bot.get_channel(POLLS_CHANNEL_ID)
+    try:
+        msg = await channel.fetch_message(int(message_id))
+        yes = 0
+        no = 0
+        for r in msg.reactions:
+            if str(r.emoji) == "✅": yes = r.count - 1
+            if str(r.emoji) == "❌": no = r.count - 1
+            
+        embed = msg.embeds[0]
+        embed.color = 0x808080
+        embed.add_field(name="🔴 POLL ENDED", value=f"✅ YES: {yes}\n❌ NO: {no}", inline=False)
+        await msg.edit(embed=embed)
+        await interaction.response.send_message("Poll ended.", ephemeral=True)
+    except:
+        await interaction.response.send_message("Message not found.", ephemeral=True)
 
 # ==========================================
 # ⚡ CORE EVENTS & COMMANDS
@@ -767,12 +812,21 @@ async def start_giveaway(interaction: discord.Interaction, time_str: str, winner
 @bot.event
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE: {bot.user}")
+    
+    # 1. Sync Commands to fix "Signature Mismatch"
+    try: 
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"❌ Sync Error: {e}")
+
+    # 2. Start Loops
     bot.loop.create_task(backup_points_task())
     dino_scramble_loop.start()
     minigames_auto_loop.start()
     check_giveaways.start() 
     
-    # SHOP POSTING
+    # 3. SHOP POSTING
     for guild in bot.guilds:
         ch = discord.utils.get(guild.text_channels, name=SHOP_CHANNEL_NAME)
         if not ch: continue
@@ -785,7 +839,7 @@ async def on_ready():
                 embed.add_field(name=f"{i['name']} - {i['price']} Pts", value=i['desc'], inline=False)
             await ch.send(embed=embed)
 
-    # ROLES POSTING
+    # 4. ROLES POSTING
     r_ch = bot.get_channel(ROLES_CHANNEL_ID)
     if r_ch:
         last_r = None
@@ -795,7 +849,7 @@ async def on_ready():
             embed = discord.Embed(title="🎭 **SELF ROLES**", description="Click to get notified!", color=0x00AAFF)
             await r_ch.send(embed=embed, view=RolesView())
             
-    # COMMANDS POSTING
+    # 5. COMMANDS POSTING (ONLY TEXT)
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
         async for m in c_ch.history(limit=5):
@@ -808,7 +862,7 @@ async def on_ready():
         embed.set_footer(text="HELL SYSTEM • Commands")
         await c_ch.send(embed=embed)
 
-    # AUTO HYPESQUAD LOOP
+    # 6. AUTO HYPESQUAD LOOP
     async def check_support_roles():
         while True:
             guild = bot.guilds[0] if bot.guilds else None
@@ -851,17 +905,14 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_message(message):
-    # 1. BOT MESSAGES IN COMMAND CHANNEL
     if message.author.bot:
         if message.channel.id == CMD_CHANNEL_ID:
-            # Protect the Menu
             if message.embeds and "SERVER COMMANDS" in (message.embeds[0].title or ""):
-                return
-            # Delete everything else after 2m
-            await message.delete(delay=120)
+                return # KEEP MENU
+            await message.delete(delay=120) # DELETE BOT REPLIES
         return
 
-    # 2. SUGGESTIONS
+    # SUGGESTIONS
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if message.content.startswith(".suggest"):
             await message.delete()
@@ -873,13 +924,13 @@ async def on_message(message):
         else: await message.delete()
         return
 
-    # 3. USER MESSAGES IN COMMAND CHANNEL
+    # CLEAN COMMANDS CHANNEL (USER SIDE)
     if message.channel.id == CMD_CHANNEL_ID:
-        if message.content.startswith(("!", ".", "/")):
-            await message.delete(delay=120)
+        if message.content.startswith((".", "!", "/")):
+            await message.delete(delay=120) # Delete valid cmd after 2m
             await bot.process_commands(message)
         else:
-            try: await message.delete() # Instant delete
+            try: await message.delete() # Instant delete junk
             except: pass
         return
 
@@ -902,9 +953,11 @@ async def rp(i: discord.Interaction, user: discord.Member, amount: int):
 async def p(ctx):
     pts = get_user_points(ctx.author.id)
     m = await ctx.send(f"💰 {ctx.author.mention} you have **{pts}** points.")
-    await ctx.message.delete()
-    await asyncio.sleep(10)
-    await m.delete()
+    try:
+        await ctx.message.delete() # Delete user msg
+        await asyncio.sleep(10)
+        await m.delete() # Delete bot msg
+    except: pass
 
 @bot.tree.command(name="event_vault")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
@@ -969,6 +1022,12 @@ async def manage_vault_hints(channel, message, code):
         embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{code[:3]}#`", inline=True)
         await message.edit(embed=embed)
     except: pass
+
+@bot.command(name="sync")
+async def sync(ctx):
+    if ctx.author.guild_permissions.administrator:
+        await bot.tree.sync()
+        await ctx.send("Synced!")
 
 # START
 if __name__ == "__main__":
