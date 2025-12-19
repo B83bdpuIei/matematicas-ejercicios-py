@@ -938,20 +938,22 @@ async def on_message(message):
 # ==========================================
 @bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
 async def finish_polls(interaction: discord.Interaction):
-    # 1. Verificar permisos
-    if not interaction.user.guild_permissions.administrator:
-        return await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+    # 1. DEFER INMEDIATO (Para evitar el error "Unknown Interaction")
+    # Lo ponemos ephemeral=False para que todos vean el resultado al final, 
+    # o True si solo quieres verlo tú. Tú decides.
+    await interaction.response.defer(ephemeral=False)
 
-    # 2. Obtener canal
+    # 2. Verificar permisos (Usamos followup porque ya hemos hecho defer)
+    if not interaction.user.guild_permissions.administrator:
+        return await interaction.followup.send("❌ No tienes permisos.")
+
+    # 3. Obtener canal (Usamos variable global POLLS_CHANNEL_ID)
     poll_channel = bot.get_channel(POLLS_CHANNEL_ID)
     if not poll_channel:
-        return await interaction.response.send_message("❌ Canal no encontrado.", ephemeral=True)
+        return await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.")
 
-    await interaction.response.defer()
-
-    # ID de la flecha (más seguro que el string completo)
+    # --- CONFIGURACIÓN ---
     ARROW_ID = "1211049707128750080" 
-    # String completo para limpiar el título luego
     ARROW_FULL = "<a:hell_arrow:1211049707128750080>"
 
     valid_polls = []
@@ -959,7 +961,7 @@ async def finish_polls(interaction: discord.Interaction):
     
     print("--- INICIANDO ESCANEO ---")
 
-    # 3. LÓGICA DE DETECCIÓN INTELIGENTE
+    # 4. LÓGICA DE DETECCIÓN INTELIGENTE
     async for message in poll_channel.history(limit=200):
         content = message.content
         if not content: continue 
@@ -968,20 +970,19 @@ async def finish_polls(interaction: discord.Interaction):
         if ARROW_ID in content:
             valid_polls.append(message)
             found_any = True
-            print(f"✅ Encuesta detectada: {content[:20]}...")
+            print(f"✅ Encuesta: {content[:15]}...")
 
         # B. ¿Es un separador o mensaje del bot? (LO IGNORAMOS Y SEGUIMOS)
         elif "----" in content or message.author == bot.user:
             continue
         
-        # C. ¿Es un mensaje random DEPUÉS de haber encontrado encuestas?
-        # Solo paramos si ya hemos encontrado alguna encuesta y de repente vemos texto normal (fin de season)
+        # C. ¿Es un mensaje normal DESPUÉS de haber encontrado encuestas?
+        # Aquí cortamos para no coger la season anterior.
         elif found_any:
-            print(f"🛑 Fin de bloque detectado en: {content[:20]}")
+            print(f"🛑 Fin de season detectado en: {content[:15]}")
             break
             
-        # D. Si aún no hemos encontrado nada y vemos texto random, seguimos buscando un poco más
-        # por si hay charla antes de la primera encuesta.
+        # D. Si aún no hemos encontrado nada, seguimos buscando
         else:
             continue
 
@@ -989,7 +990,7 @@ async def finish_polls(interaction: discord.Interaction):
     valid_polls.reverse()
     results_text = ""
     
-    # 4. PROCESAMIENTO
+    # 5. PROCESAMIENTO
     for message in valid_polls:
         lines = message.content.split('\n')
         
@@ -997,7 +998,7 @@ async def finish_polls(interaction: discord.Interaction):
         title = None
         for line in lines:
             if ARROW_ID in line:
-                # Limpiamos usando el ID o el string común
+                # Limpieza agresiva para dejar solo el texto del título
                 title = line.replace(ARROW_FULL, "").replace(ARROW_ID, "").replace("<a:hell_arrow:>", "").replace("*", "").replace(">", "").strip()
                 break
         
@@ -1028,7 +1029,7 @@ async def finish_polls(interaction: discord.Interaction):
 
         results_text += f"> **{title}** : {result_str}\n"
 
-    # 5. ENVIAR EMBED
+    # 6. ENVIAR RESULTADO
     if results_text:
         today_str = datetime.date.today().strftime("%Y-%m-%d")
         
@@ -1043,6 +1044,6 @@ async def finish_polls(interaction: discord.Interaction):
         
         await interaction.followup.send(embed=embed)
     else:
-        await interaction.followup.send("❌ No se encontraron encuestas. (Mira la consola para ver detalles).")
+        await interaction.followup.send("❌ No se encontraron encuestas nuevas con la flecha Hell Arrow.")
 if __name__ == "__main__":
     if TOKEN: bot.run(TOKEN)
