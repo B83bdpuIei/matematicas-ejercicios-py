@@ -933,8 +933,6 @@ async def on_message(message):
         return
 
     await bot.process_commands(message)
-
-if __name__ == "__main__":
 # ==========================================
 # 📊 COMANDO FINISH POLLS (Formato Season Specs)
 # ==========================================
@@ -1024,4 +1022,5 @@ async def finish_polls(interaction: discord.Interaction):
         await interaction.followup.send(embed=embed)
     else:
         await interaction.followup.send("❌ No se encontraron encuestas.")
+if __name__ == "__main__":
     if TOKEN: bot.run(TOKEN)
