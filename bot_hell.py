@@ -934,4 +934,85 @@ async def on_message(message):
     await bot.process_commands(message)
 
 if __name__ == "__main__":
+# ==========================================
+# 📊 COMANDO FINISH POLLS (Formato Season Specs)
+# ==========================================
+@bot.tree.command(name="finish_polls", description="Genera el resumen de votaciones (Season Specs)")
+async def finish_polls(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        return await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+
+    # Canal origen de los votos (polls)
+    poll_channel = bot.get_channel(1449083865862770819) 
+    if not poll_channel:
+        return await interaction.response.send_message("❌ No encuentro el canal de encuestas (ID: 1449083865862770819).", ephemeral=True)
+
+    await interaction.response.defer()
+
+    results_text = ""
+    
+    # Leemos el historial (ajusta el limit si hay muchas)
+    # oldest_first=True para que salga en orden de creación
+    async for message in poll_channel.history(limit=50, oldest_first=True):
+        if not message.content: continue
+
+        lines = message.content.split('\n')
+        title = None
+        
+        # 1. Buscamos el título (Empieza por > o es la primera línea relevante)
+        for line in lines:
+            if line.strip().startswith(">"):
+                title = line.replace(">", "").replace("*", "").strip()
+                break
+        
+        # Si no hay título (no es una encuesta válida), saltamos
+        if not title: continue 
+
+        # 2. Calculamos el ganador
+        winner_emoji = None
+        max_votes = -1
+
+        for reaction in message.reactions:
+            # Restamos 1 si el bot se reaccionó a sí mismo (opcional, pero recomendado)
+            count = reaction.count 
+            if count > max_votes:
+                max_votes = count
+                winner_emoji = reaction.emoji
+        
+        # 3. Buscamos el texto asociado al emoji ganador
+        result_str = "Empate / Sin votos"
+        
+        if winner_emoji and max_votes > 1: # >1 asumiendo que el bot pone el primer voto
+            # Intentamos buscar el texto en el mensaje que tenga ese emoji
+            found_text = False
+            for line in lines:
+                if str(winner_emoji) in line:
+                    # Limpiamos la línea para dejar solo el texto de la opción
+                    result_str = line.replace(str(winner_emoji), "").strip()
+                    found_text = True
+                    break
+            
+            # Si no encuentra texto (ej: votación simple Si/No sin texto en la línea)
+            if not found_text:
+                str_emoji = str(winner_emoji)
+                if "check" in str_emoji.lower() or "✅" in str_emoji: result_str = "Yes"
+                elif "cross" in str_emoji.lower() or "cruz" in str_emoji.lower() or "❌" in str_emoji: result_str = "No"
+                else: result_str = f"{str_emoji}" # Pone el emoji si no sabe qué es
+
+        # Formato de la línea de resultado
+        results_text += f"> **{title}** : {result_str}\n"
+
+    # 4. Enviamos el Embed Final
+    if results_text:
+        embed = discord.Embed(title="📢 **POLL RESULTS**", description=results_text, color=0x990000) # Rojo oscuro
+        # Fecha en el footer o descripción como en tu foto
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        embed.set_footer(text=f"📅 {today_str} • Season Specs")
+        
+        if interaction.guild.icon:
+            embed.set_thumbnail(url=interaction.guild.icon.url)
+            
+        await interaction.followup.send(embed=embed)
+    else:
+        await interaction.followup.send("❌ No he encontrado encuestas válidas para resumir.")
     if TOKEN: bot.run(TOKEN)
