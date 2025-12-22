@@ -206,8 +206,8 @@ EMOJI_VAULT_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 EMOJI_VAULT_CODE_ICON = SERVER_EMOJIS["emoji_69"]
 
 # 🔥 EMOJIS NUEVOS PARA EL FINAL DEL SORTEO 🔥
-EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]    # El nuevo emoji para ENDED
-EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"] # La corona amarilla para ganadores
+EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]
+EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
@@ -353,8 +353,6 @@ def parse_poll_result(content, winner_emoji):
 
 # 🔥 NUEVO CONVERTIDOR DE TIEMPO FLEXIBLE (Soporta espacios "3d 17h") 🔥
 def convert_time(time_str):
-    # Regex para buscar pares de números y letras (3d, 10m, 5s)
-    # Ignora espacios y mayúsculas
     time_regex = re.compile(r"(\d+)([smhd])")
     matches = time_regex.findall(time_str.lower().replace(" ", ""))
     
@@ -396,7 +394,6 @@ async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_co
         
         embed = msg.embeds[0]
         embed.color = discord.Color.greyple()
-        # 🔥 AQUÍ SE HAN CAMBIADO LOS EMOJIS 🔥
         embed.description = (
             f"{EMOJI_GIFT_NEW} **Prize:** {prize}\n"
             f"{EMOJI_GIVEAWAY_ENDED_RED} **ENDED**\n"
@@ -837,7 +834,32 @@ async def check_points(ctx):
 
 @bot.command(name="recipes")
 async def show_recipes(ctx):
-    msg = await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Recipes image here)*")
+    # 🔥 AQUI ESTA EL CAMBIO: EMBED EN VEZ DE IMAGEN 🔥
+    embed = discord.Embed(title=f"{EMOJI_BLOOD} **HELL RECIPES** {EMOJI_BLOOD}", color=0x990000)
+    embed.description = "Custom crafting recipes for this season."
+    
+    # Lista de recetas
+    recipes = [
+        ("🍰 Sweet Veg. Cake", "50 Cementing Paste"),
+        ("🥚 Kibble", "1 Fiber"),
+        ("🎨 Colors", "1 Thatch"),
+        ("🥩 Shadow Steak", "1 Raw Meat"),
+        ("🧠 Mindwipe Tonic", "200 Mejoberries"),
+        ("💉 Medical Brew", "1 Tintoberry"),
+        ("⚔️ Battle Tartare", "10 Crystal"),
+        ("🍺 Beer Jar", "5 Thatch"),
+        ("🌵 Cactus Broth", "50 Stone"),
+        ("🍄 Mushroom Brew", "5 Aquatic Mushroom"),
+        ("🌶️ Focal Chili", "100 Raw Metal"),
+        ("🦗 Bug Repellent", "1 Chitin/Keratin")
+    ]
+
+    for name, ingredients in recipes:
+        # Usamos HELL_ARROW para la flecha
+        embed.add_field(name=f"**{name}**", value=f"{HELL_ARROW} {ingredients}", inline=True)
+
+    embed.set_footer(text="Hell System • Crafting")
+    await ctx.send(embed=embed)
 
 @bot.tree.command(name="event_vault")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
@@ -968,6 +990,14 @@ async def on_ready():
     try: await bot.tree.sync()
     except: pass
     
+    # 🔴 HERRAMIENTA DE EMOJIS (SOLO IMPRIME EN CONSOLA)
+    print("\n--- LISTA DE EMOJIS DEL SERVIDOR ---")
+    for guild in bot.guilds:
+        print(f"Servidor: {guild.name}")
+        for emoji in guild.emojis:
+            print(f"Nombre: {emoji.name} | ID: {emoji.id} | Código: <:{emoji.name}:{emoji.id}>")
+    print("------------------------------------\n")
+
     bot.loop.create_task(backup_points_task())
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
