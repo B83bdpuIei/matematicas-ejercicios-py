@@ -53,8 +53,9 @@ DB_CHANNEL_ID = 1451330350436323348
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATA & EMOJIS
+# 🖼️ DATA & EMOJIS (CONFIGURACIÓN FÁCIL)
 # ==========================================
+# ¡COPIA EL ID DE LA CONSOLA AL INICIAR EL BOT Y PÉGALO AQUÍ!
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
@@ -71,12 +72,15 @@ EMOJI_WINNER     = "<a:party:1450625235383488649>"
 EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
 EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
-EMOJI_PARTY_NEW = "<a:party:1137005680520331304>"
-EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>"
-EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>"
-EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>"
-EMOJI_VAULT_WINNER_CROWN = "<a:yelow_crown:1219625559747858523>"
-EMOJI_VAULT_CODE_ICON = "<a:emoji_69:1328804255741771899>"
+# 🔥 EMOJIS DE GIVEAWAY 🔥
+EMOJI_PARTY_NEW = "<a:party:1137005680520331304>" # Fiesta
+EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>" # Regalo
+EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>" # Fuego
+EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>" # Reloj
+
+# 🔥 EMOJIS DE VAULT 🔥
+EMOJI_VAULT_WINNER_CROWN = "<a:yelow_crown:1219625559747858523>" # Corona
+EMOJI_VAULT_CODE_ICON = "<a:emoji_69:1328804255741771899>"    # Diamante
 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
@@ -240,7 +244,7 @@ last_dino_message = None
 
 # --- RAM DATABASE & CLOUD SYNC ---
 points_data = {} 
-giveaways_data = {} # 🔥 NUEVA VARIABLE PARA SORTEOS PERSISTENTES
+giveaways_data = {} 
 
 def add_points_to_user(user_id, amount):
     uid = str(user_id)
@@ -260,7 +264,7 @@ def remove_points_from_user(user_id, amount):
 def get_user_points(user_id):
     return points_data.get(str(user_id), 0)
 
-# 🔥 FUNCIONES DE GUARDADO DE SORTEOS 🔥
+# 🔥 FUNCIONES DE GUARDADO 🔥
 async def save_giveaways_db():
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
@@ -286,7 +290,7 @@ async def backup_points_task():
                         break
     except: pass
 
-    # 2. LOAD GIVEAWAYS (Y reactivar cronómetros)
+    # 2. LOAD GIVEAWAYS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -301,11 +305,9 @@ async def backup_points_task():
                         found_gw = True
                         break
             
-            # Reactivar sorteos pendientes
             if found_gw:
                 for msg_id, data in list(giveaways_data.items()):
-                    remaining = data["end_time"] - time.time()
-                    # Lanzar tarea de finalización
+                    # Reactivar tareas de sorteo
                     bot.loop.create_task(run_giveaway_timer(
                         int(data["channel_id"]), 
                         int(msg_id), 
@@ -316,7 +318,7 @@ async def backup_points_task():
     except Exception as e: 
         print(f"[DB ERROR] Giveaways load failed: {e}")
 
-    # Loop de guardado de puntos (Giveaways se guardan al instante)
+    # Loop de guardado de puntos
     while not bot.is_closed():
         await asyncio.sleep(120) 
         try:
@@ -325,12 +327,9 @@ async def backup_points_task():
                 json_str = json.dumps(points_data, indent=None)
                 file_obj = discord.File(io.StringIO(json_str), filename="db_points.json")
                 await channel.send(f"Points Backup: {int(time.time())}", file=file_obj)
-                
-                # Limpieza de backups viejos
                 try:
                     async for msg in channel.history(limit=20):
                         if msg.author == bot.user:
-                            # Borrar si es muy viejo (más de 10 min) para no llenar el canal
                             if (time.time() - msg.created_at.timestamp()) > 600:
                                 await msg.delete()
                 except: pass
@@ -371,40 +370,43 @@ def parse_poll_result(content, winner_emoji):
     if not found: answer = s_emoji 
     return question, answer
 
+# 🔥 NUEVO CONVERTIDOR DE TIEMPO FLEXIBLE (Soporta espacios "3d 17h") 🔥
 def convert_time(time_str):
-    pos = ["s","m","h","d"]
-    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 3600*24}
-    unit = time_str[-1]
-    if unit not in pos: return -1
-    try: val = int(time_str[:-1])
-    except: return -2
-    return val * time_dict[unit]
+    # Regex para buscar pares de números y letras (3d, 10m, 5s)
+    # Ignora espacios y mayúsculas
+    time_regex = re.compile(r"(\d+)([smhd])")
+    matches = time_regex.findall(time_str.lower().replace(" ", ""))
+    
+    total_seconds = 0
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    
+    if not matches: return -1
+    
+    for amount, unit in matches:
+        total_seconds += int(amount) * time_dict[unit]
+        
+    return total_seconds
 
-# 🔥 LÓGICA CENTRAL DE FINALIZACIÓN DE SORTEO 🔥
 async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_count):
-    # 1. Esperar lo que falte
     remaining = end_time - time.time()
     if remaining > 0:
         await asyncio.sleep(remaining)
     
-    # 2. Obtener mensaje y canal
     try:
         channel = bot.get_channel(channel_id)
         if not channel: return
         msg = await channel.fetch_message(message_id)
     except:
-        # Si no existe, lo borramos de la DB
         if str(message_id) in giveaways_data:
             del giveaways_data[str(message_id)]
             await save_giveaways_db()
         return
 
-    # 3. Elegir Ganadores (FILTRANDO BOTS)
     users = []
     for reaction in msg.reactions:
         if str(reaction.emoji) == EMOJI_PARTY_NEW:
             async for user in reaction.users():
-                if not user.bot: # 🚫 NO BOTS
+                if not user.bot: 
                     users.append(user)
     
     if len(users) > 0:
@@ -423,7 +425,6 @@ async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_co
     else:
         await channel.send(f"❌ Giveaway for **{prize}** ended without participants.")
 
-    # 4. Eliminar de la DB porque ya acabó
     if str(message_id) in giveaways_data:
         del giveaways_data[str(message_id)]
         await save_giveaways_db()
@@ -740,7 +741,6 @@ async def minigames_auto_loop():
         channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
         if not channel: return
         
-        # 🔥 LIMPIEZA DE MINIJUEGO ANTERIOR
         if last_minigame_message:
             try: await last_minigame_message.edit(view=None)
             except: pass 
@@ -992,6 +992,15 @@ async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE: {bot.user}")
     try: await bot.tree.sync()
     except: pass
+    
+    # 🔴 HERRAMIENTA DE EMOJIS (SOLO IMPRIME EN CONSOLA)
+    print("\n--- LISTA DE EMOJIS DEL SERVIDOR ---")
+    for guild in bot.guilds:
+        print(f"Servidor: {guild.name}")
+        for emoji in guild.emojis:
+            print(f"Nombre: {emoji.name} | ID: {emoji.id} | Código: <:{emoji.name}:{emoji.id}>")
+    print("------------------------------------\n")
+
     bot.loop.create_task(backup_points_task())
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
@@ -1039,10 +1048,8 @@ async def on_ready():
                 embed.set_footer(text="Hell System • Economy")
                 await shop_channel.send(embed=embed)
 
-    # 🔥 LIMPIEZA DE CHAT DE COMANDOS (NO SPAM AL REINICIAR) 🔥
     c_ch = bot.get_channel(CMD_CHANNEL_ID)
     if c_ch:
-        # Borra mensajes viejos del bot para limpiar
         async for m in c_ch.history(limit=10):
             if m.author == bot.user:
                 if m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
