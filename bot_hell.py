@@ -988,8 +988,8 @@ async def on_message(message):
 
         # --- B) SI EL MENSAJE ES DE UNA PERSONA ---
         # 1. NO BORRAR INTERACCIONES DE SLASH COMMANDS (Los mensajes tipo "Used /command")
-        # Usamos el nombre NUEVO de la propiedad para que no de error
-        if message.type == discord.MessageType.chat_input_command or message.type == discord.MessageType.interaction:
+        # 🔥 CAMBIO IMPORTANTE: chat_input_command
+        if message.type == discord.MessageType.chat_input_command:
             return 
 
         # 2. NO BORRAR COMANDOS ESCRITOS CON BARRA (/)
