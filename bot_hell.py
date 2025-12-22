@@ -240,6 +240,7 @@ last_dino_message = None
 
 # --- RAM DATABASE & CLOUD SYNC ---
 points_data = {} 
+giveaways_data = {} # 🔥 NUEVA VARIABLE PARA SORTEOS PERSISTENTES
 
 def add_points_to_user(user_id, amount):
     uid = str(user_id)
@@ -259,28 +260,63 @@ def remove_points_from_user(user_id, amount):
 def get_user_points(user_id):
     return points_data.get(str(user_id), 0)
 
-async def backup_points_task():
-    await bot.wait_until_ready()
+# 🔥 FUNCIONES DE GUARDADO DE SORTEOS 🔥
+async def save_giveaways_db():
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
-            print("[DB] Checking Discord for backup...")
-            found = False
-            async for msg in channel.history(limit=10):
+            json_str = json.dumps(giveaways_data, indent=None)
+            file_obj = discord.File(io.StringIO(json_str), filename="db_giveaways.json")
+            await channel.send(f"Giveaways Backup: {int(time.time())}", file=file_obj)
+    except: pass
+
+async def backup_points_task():
+    await bot.wait_until_ready()
+    # 1. LOAD POINTS
+    try:
+        channel = bot.get_channel(DB_CHANNEL_ID)
+        if channel:
+            async for msg in channel.history(limit=50):
                 if msg.author == bot.user and msg.attachments:
-                    try:
+                    if msg.attachments[0].filename == "db_points.json":
                         data_bytes = await msg.attachments[0].read()
                         global points_data
                         points_data = json.loads(data_bytes)
-                        print(f"[DB] Successfully loaded points for {len(points_data)} users.")
-                        found = True
+                        print(f"[DB] Points loaded.")
                         break
-                    except: pass
-            if not found:
-                print("[DB] No backup found. Starting with 0 points.")
-    except Exception as e:
-        print(f"[DB ERROR] Startup load failed: {e}")
+    except: pass
 
+    # 2. LOAD GIVEAWAYS (Y reactivar cronómetros)
+    try:
+        channel = bot.get_channel(DB_CHANNEL_ID)
+        if channel:
+            found_gw = False
+            async for msg in channel.history(limit=50):
+                if msg.author == bot.user and msg.attachments:
+                    if msg.attachments[0].filename == "db_giveaways.json":
+                        data_bytes = await msg.attachments[0].read()
+                        global giveaways_data
+                        giveaways_data = json.loads(data_bytes)
+                        print(f"[DB] Giveaways loaded: {len(giveaways_data)}")
+                        found_gw = True
+                        break
+            
+            # Reactivar sorteos pendientes
+            if found_gw:
+                for msg_id, data in list(giveaways_data.items()):
+                    remaining = data["end_time"] - time.time()
+                    # Lanzar tarea de finalización
+                    bot.loop.create_task(run_giveaway_timer(
+                        int(data["channel_id"]), 
+                        int(msg_id), 
+                        data["end_time"], 
+                        data["prize"], 
+                        data["winners"]
+                    ))
+    except Exception as e: 
+        print(f"[DB ERROR] Giveaways load failed: {e}")
+
+    # Loop de guardado de puntos (Giveaways se guardan al instante)
     while not bot.is_closed():
         await asyncio.sleep(120) 
         try:
@@ -288,15 +324,17 @@ async def backup_points_task():
             if channel and points_data:
                 json_str = json.dumps(points_data, indent=None)
                 file_obj = discord.File(io.StringIO(json_str), filename="db_points.json")
-                await channel.send(f"Backup: {int(time.time())}", file=file_obj)
+                await channel.send(f"Points Backup: {int(time.time())}", file=file_obj)
+                
+                # Limpieza de backups viejos
                 try:
-                    async for msg in channel.history(limit=10):
-                        if msg.author == bot.user and (time.time() - msg.created_at.timestamp()) > 10:
-                            await msg.delete()
+                    async for msg in channel.history(limit=20):
+                        if msg.author == bot.user:
+                            # Borrar si es muy viejo (más de 10 min) para no llenar el canal
+                            if (time.time() - msg.created_at.timestamp()) > 600:
+                                await msg.delete()
                 except: pass
-                print("[DB] Saved to Cloud.")
-        except Exception as e:
-            print(f"[DB ERROR] Save failed: {e}")
+        except: pass
 
 # ==========================================
 # ⚙️ SETUP BOT
@@ -333,6 +371,63 @@ def parse_poll_result(content, winner_emoji):
     if not found: answer = s_emoji 
     return question, answer
 
+def convert_time(time_str):
+    pos = ["s","m","h","d"]
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 3600*24}
+    unit = time_str[-1]
+    if unit not in pos: return -1
+    try: val = int(time_str[:-1])
+    except: return -2
+    return val * time_dict[unit]
+
+# 🔥 LÓGICA CENTRAL DE FINALIZACIÓN DE SORTEO 🔥
+async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_count):
+    # 1. Esperar lo que falte
+    remaining = end_time - time.time()
+    if remaining > 0:
+        await asyncio.sleep(remaining)
+    
+    # 2. Obtener mensaje y canal
+    try:
+        channel = bot.get_channel(channel_id)
+        if not channel: return
+        msg = await channel.fetch_message(message_id)
+    except:
+        # Si no existe, lo borramos de la DB
+        if str(message_id) in giveaways_data:
+            del giveaways_data[str(message_id)]
+            await save_giveaways_db()
+        return
+
+    # 3. Elegir Ganadores (FILTRANDO BOTS)
+    users = []
+    for reaction in msg.reactions:
+        if str(reaction.emoji) == EMOJI_PARTY_NEW:
+            async for user in reaction.users():
+                if not user.bot: # 🚫 NO BOTS
+                    users.append(user)
+    
+    if len(users) > 0:
+        winner_list = random.sample(users, k=min(len(users), winners_count))
+        winners_text = ", ".join([w.mention for w in winner_list])
+        
+        embed = msg.embeds[0]
+        embed.color = discord.Color.greyple()
+        embed.description = (
+            f"{EMOJI_GIFT_NEW} **Prize:** {prize}\n"
+            f"🛑 **ENDED**\n"
+            f"👑 **Winners:** {winners_text}"
+        )
+        await msg.edit(embed=embed)
+        await channel.send(f"🎉 **CONGRATULATIONS** {winners_text}! You won **{prize}**!")
+    else:
+        await channel.send(f"❌ Giveaway for **{prize}** ended without participants.")
+
+    # 4. Eliminar de la DB porque ya acabó
+    if str(message_id) in giveaways_data:
+        del giveaways_data[str(message_id)]
+        await save_giveaways_db()
+
 # ==========================================
 # 🦖 MINIGAME: WHO IS THE DINO
 # ==========================================
@@ -367,7 +462,6 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             embed.set_footer(text="Hell System • Dino Games")
             if interaction.channel: await interaction.channel.send(embed=embed)
             
-            # 🔥 BLOQUEAR BOTÓN AL GANAR
             try:
                 view = self.view_ref 
                 for child in view.children: child.disabled = True
@@ -400,7 +494,6 @@ async def dino_game_loop():
         channel = bot.get_channel(DINO_CHANNEL_ID)
         if not channel: return
         
-        # 🔥 LIMPIEZA DE DINO ANTERIOR
         if last_dino_message:
             try: await last_dino_message.edit(view=None)
             except: pass
@@ -762,10 +855,7 @@ async def check_points(ctx):
 
 @bot.command(name="recipes")
 async def show_recipes(ctx):
-    # La respuesta del bot se borra sola a los 120s si está en el canal de comandos,
-    # pero aquí forzamos que se vea
     msg = await ctx.send(f"{HELL_ARROW} **RECIPES:**\n*(Recipes image here)*")
-    # Este mensaje se gestiona en el on_message si es canal de comandos
 
 @bot.tree.command(name="event_vault")
 async def event_vault(interaction: discord.Interaction, code: str, prize: str):
@@ -782,14 +872,23 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(ch, msg, code))
     await interaction.followup.send("✅ Started")
 
+# ------------------------------------------------------------------
+# 🔥 COMANDO REESCRITO: start_giveaway (CON PERSISTENCIA Y ANTI-BOT)
+# ------------------------------------------------------------------
 @bot.tree.command(name="start_giveaway")
-async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: str):
+async def start_giveaway(interaction: discord.Interaction, time_str: str, prize: str, winners: int = 1):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
 
+    # 1. Convertir Tiempo
+    seconds = convert_time(time_str)
+    if seconds < 0:
+        await interaction.response.send_message("❌ Tiempo inválido. Usa formato `10m`, `1h`, `2d`.", ephemeral=True)
+        return
+
+    # 2. Configurar Embed (Sponsor vs Normal)
     is_sponsor_channel = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
-    
     if is_sponsor_channel:
         embed_color = 0x990000
         embed_title = f"{EMOJI_FIRE_ANIM} HELL SPONSOR GIVEAWAY {EMOJI_FIRE_ANIM}"
@@ -799,18 +898,38 @@ async def start_giveaway(interaction: discord.Interaction, tiempo: str, premio: 
         embed_title = f"{EMOJI_PARTY_NEW} GIVEAWAY"
         footer_text = "Hell System • Giveaway"
 
-    description = (
-        f"{EMOJI_GIFT_NEW} **Prize:** {premio}\n"
-        f"{EMOJI_CLOCK_NEW} **Time:** {tiempo}\n\n"
+    # Calcular Timestamp para la cuenta atrás de Discord
+    end_timestamp = int(time.time() + seconds)
+    
+    embed = discord.Embed(title=embed_title, color=embed_color)
+    embed.description = (
+        f"{EMOJI_GIFT_NEW} **Prize:** {prize}\n"
+        f"{EMOJI_CLOCK_NEW} **Ends:** <t:{end_timestamp}:R>\n" 
+        f"👑 **Winners:** {winners}\n\n"
         f"React with {EMOJI_PARTY_NEW} to enter!"
     )
-
-    embed = discord.Embed(title=embed_title, description=description, color=embed_color)
     embed.set_footer(text=footer_text)
-    
+
     await interaction.response.send_message(embed=embed)
     msg = await interaction.original_response()
     await msg.add_reaction(EMOJI_PARTY_NEW)
+
+    # 3. GUARDAR EN DB Y ARRANCAR
+    giveaways_data[str(msg.id)] = {
+        "channel_id": interaction.channel_id,
+        "end_time": end_timestamp,
+        "prize": prize,
+        "winners": winners
+    }
+    await save_giveaways_db()
+    
+    bot.loop.create_task(run_giveaway_timer(
+        interaction.channel_id, 
+        msg.id, 
+        end_timestamp, 
+        prize, 
+        winners
+    ))
 
 @bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
 async def finish_polls(interaction: discord.Interaction):
@@ -926,20 +1045,15 @@ async def on_ready():
         # Borra mensajes viejos del bot para limpiar
         async for m in c_ch.history(limit=10):
             if m.author == bot.user:
-                # Si es el menú de comandos, NO lo borramos y marcamos que ya existe
                 if m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
                     pass 
                 else:
-                    await m.delete() # Borra basura vieja
-                    
-        # Verificar si el menú ya existe
+                    await m.delete() 
         menu_exists = False
         async for m in c_ch.history(limit=10):
              if m.author == bot.user and m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
                  menu_exists = True
                  break
-        
-        # Solo enviamos si no existe
         if not menu_exists:
             embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
             embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{HELL_ARROW} **!recipes**\n{HELL_ARROW} **!points**\n{HELL_ARROW} **.suggest <text>**\n{HELL_ARROW} **/whitelistme**", inline=False)
@@ -970,47 +1084,32 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_message(message):
-    # ---------------------------------------------------------
-    # 1. LÓGICA DEL CANAL DE COMANDOS (CMD_CHANNEL_ID)
-    # ---------------------------------------------------------
     if message.channel.id == CMD_CHANNEL_ID:
-        
-        # --- A) SI EL MENSAJE ES DE UN BOT (CUALQUIER BOT) ---
+        # A) BOTS (Borrar tras 2min, salvo menú)
         if message.author.bot:
-            # EXCEPCIÓN: Si es el MENÚ DE COMANDOS DE NUESTRO BOT, no hacemos nada
             if message.author == bot.user and message.embeds:
                 if "SERVER COMMANDS" in (message.embeds[0].title or ""):
                     return 
-            
-            # CUALQUIER OTRA RESPUESTA DE BOT (INCLUYENDO HELENA): Borrar a los 2 minutos (120s)
             await message.delete(delay=120)
             return
 
-        # --- B) SI EL MENSAJE ES DE UNA PERSONA ---
-        # 1. NO BORRAR INTERACCIONES DE SLASH COMMANDS (Los mensajes tipo "Used /command")
-        # 🔥 CAMBIO IMPORTANTE: Solo chat_input_command (que es el nombre correcto en 2.0+)
+        # B) USUARIOS
         if message.type == discord.MessageType.chat_input_command:
             return 
 
-        # 2. NO BORRAR COMANDOS ESCRITOS CON BARRA (/)
         if message.content.startswith('/'):
             return
 
-        # 3. Comandos de prefijo (! .) -> Borrar a los 5s (Tiempo para pensar)
         if message.content.startswith(('!', '.')):
              await bot.process_commands(message)
              try: await message.delete(delay=5)
              except: pass
              return
         
-        # 4. Todo lo demás (Texto basura) -> Borrar AL INSTANTE
         try: await message.delete() 
         except: pass
         return
 
-    # ---------------------------------------------------------
-    # 2. LÓGICA DEL CANAL DE SUGERENCIAS
-    # ---------------------------------------------------------
     if message.channel.id == SUGGEST_CHANNEL_ID:
         if message.content.startswith(".suggest"):
             txt = message.content[8:].strip()
@@ -1027,9 +1126,6 @@ async def on_message(message):
             except: pass
         return
 
-    # ---------------------------------------------------------
-    # 3. PROCESAR COMANDOS EN EL RESTO DEL SERVIDOR
-    # ---------------------------------------------------------
     await bot.process_commands(message)
 
 if __name__ == "__main__":
