@@ -53,7 +53,7 @@ DB_CHANNEL_ID = 1451330350436323348
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ EMOJIS & DATA (CORREGIDO CON ANIMADOS <a>)
+# 🖼️ EMOJIS & DATA (BASE DE DATOS COMPLETA)
 # ==========================================
 SERVER_EMOJIS = {
     # EMOJIS ANIMADOS (IMPORTANTE: LA 'a' AL PRINCIPIO)
@@ -78,9 +78,9 @@ SERVER_EMOJIS = {
     "fire": "<a:fire:1275469598183002183>",
     "warn": "<a:warn:1275471955138711572>",
     "emoji_74": "<a:emoji_74:1317875400419836016>",
-    "emoji_75": "<a:emoji_75:1317875418782498858>", # Sangre
-    "emoji_68": "<a:emoji_68:1328804237546881126>", # Codigo/Matrix
-    "emoji_69": "<a:emoji_69:1328804255741771899>", # Diamante
+    "emoji_75": "<a:emoji_75:1317875418782498858>", 
+    "emoji_68": "<a:emoji_68:1328804237546881126>", 
+    "emoji_69": "<a:emoji_69:1328804255741771899>", 
     "emoji_70": "<a:emoji_70:1328804269683376150>",
     "Blue_Arrow": "<a:Blue_Arrow:1328804298951360605>",
     "emoji_72": "<a:emoji_72:1328804312859672586>",
@@ -91,14 +91,14 @@ SERVER_EMOJIS = {
     "hype": "<a:hype:1336822678501326949>",
     "Check_hell": "<a:Check_hell:1450255850508779621>",
     "cruz_hell": "<a:cruz_hell:1450255934273355918>",
-    "pikachu_culon": "<:pikachu_culon:1450624552827752479>", # Este parece estático, si falla cámbialo a 'a'
+    "pikachu_culon": "<:pikachu_culon:1450624552827752479>", 
     "Gift_hell": "<a:Gift_hell:1450624953723654164>",
     "party_new": "<a:party:1450625235383488649>", 
     "greenarrow": "<a:greenarrow:1450625398051311667>",
-    "Pokecoin": "<:Pokecoin:1450625492309901495>", # Estático
-    "C4_HELL": "<:C4_HELL:1451357075321131049>",   # Estático
+    "Pokecoin": "<:Pokecoin:1450625492309901495>", 
+    "C4_HELL": "<:C4_HELL:1451357075321131049>",   
 
-    # RESTO (Asumidos estáticos, si alguno falla ponle 'a' delante)
+    # RESTO
     "Money": "<:Money:932019879287087164>",
     "Paypal": "<:Paypal:1096357712289345566>",
     "Emoji": "<:Emoji:1137005608697086092>",
@@ -124,7 +124,7 @@ SERVER_EMOJIS = {
     "resistence": "<:resistence:1210317577134415912>",
 }
 
-# CONFIGURACIÓN VARIABLES EMOJIS (Usando el diccionario)
+# CONFIGURACIÓN VARIABLES EMOJIS
 HELL_ARROW = SERVER_EMOJIS["hell_arrow"]
 NOTIFICATION_ICON = SERVER_EMOJIS["notification"]
 CHECK_ICON = SERVER_EMOJIS["Check_hell"]
@@ -147,9 +147,12 @@ EMOJI_CLOCK_NEW = SERVER_EMOJIS["Purple_Clock"]
 EMOJI_VAULT_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 EMOJI_VAULT_CODE_ICON = SERVER_EMOJIS["emoji_69"]
 
-# 🔥 EMOJIS FINALES DE SORTEO 🔥
 EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]
 EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
+
+# EMOJIS MODAL VAULT
+EMOJI_VAULT_WAIT = SERVER_EMOJIS["Red_Clock"]
+EMOJI_VAULT_DENIED = SERVER_EMOJIS["warn"]
 
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
@@ -409,7 +412,6 @@ class DinoView(discord.ui.View):
 
 @tasks.loop(minutes=20)
 async def dino_game_loop():
-    if not bot.is_ready(): return
     global last_dino_message
     try:
         channel = bot.get_channel(DINO_CHANNEL_ID)
@@ -438,6 +440,11 @@ async def dino_game_loop():
         last_dino_message = await channel.send(embed=embed, view=view)
     except Exception as e:
         print(f"Error in Dino Loop: {e}")
+
+# 🔥 ARREGLO DE LOOP (Espera a que el bot este listo)
+@dino_game_loop.before_loop
+async def before_dino_game_loop():
+    await bot.wait_until_ready()
 
 # ==========================================
 # 🎮 MINIGAMES CLASSES
@@ -669,6 +676,11 @@ async def minigames_auto_loop():
     except Exception as e:
         print(f"Error Minigame Loop: {e}")
 
+# 🔥 ARREGLO DE LOOP (Espera a que el bot este listo)
+@minigames_auto_loop.before_loop
+async def before_minigames_loop():
+    await bot.wait_until_ready()
+
 # ==========================================
 # 🏦 VAULT SYSTEM
 # ==========================================
@@ -679,7 +691,8 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
         current_time = time.time()
         if user_id in user_cooldowns:
             if (time.time() - user_cooldowns[user_id]) < 15:
-                await interaction.response.send_message(f"🚫 Wait...", ephemeral=True)
+                # 🔥 EMOJI RED CLOCK
+                await interaction.response.send_message(f"{EMOJI_VAULT_WAIT} Wait...", ephemeral=True)
                 return
         user_cooldowns[user_id] = current_time
         if not vault_state["active"]:
@@ -689,8 +702,22 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             vault_state["active"] = False 
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
             add_points_to_user(interaction.user.id, 2000)
-            await interaction.response.send_message(f"{EMOJI_CORRECT} **ACCESS GRANTED.**", ephemeral=True)
             
+            # 🔥 BLOQUEAR BOTÓN ORIGINAL 🔥
+            try:
+                ch = interaction.guild.get_channel(VAULT_CHANNEL_ID)
+                original_msg = await ch.fetch_message(vault_state["message_id"])
+                
+                # Crear vista con botón deshabilitado
+                view = VaultView()
+                for child in view.children:
+                    child.disabled = True
+                    child.label = "VAULT OPENED"
+                    child.style = discord.ButtonStyle.secondary
+                
+                await original_msg.edit(view=view)
+            except: pass
+
             embed = discord.Embed(title=f"{EMOJI_PARTY_NEW} VAULT CRACKED! {EMOJI_PARTY_NEW}", color=0xFFD700)
             embed.description = (
                 f"{EMOJI_VAULT_WINNER_CROWN} **WINNER:** {interaction.user.mention}\n"
@@ -701,8 +728,11 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             embed.set_footer(text="HELL SYSTEM • Vault Event")
             embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
             if interaction.channel: await interaction.channel.send(embed=embed)
+            
+            # AQUI YA NO MANDAMOS NADA EFIMERO, SOLO EL WINNER PUBLICO
         else:
-            await interaction.response.send_message(f"⚠️ **ACCESS DENIED.**", ephemeral=True)
+            # 🔥 EMOJI WARN
+            await interaction.response.send_message(f"{EMOJI_VAULT_DENIED} **ACCESS DENIED.**", ephemeral=True)
 
 class VaultView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
@@ -775,12 +805,8 @@ async def check_points(ctx):
 
 @bot.command(name="recipes")
 async def show_recipes(ctx):
-    # 🔥 AQUI ESTA EL CAMBIO: EMBED EN VEZ DE IMAGEN 🔥
     embed = discord.Embed(title=f"{EMOJI_BLOOD} **HELL RECIPES** {EMOJI_BLOOD}", color=0x990000)
     embed.description = "Custom crafting recipes for this season."
-    
-    # 🔥 AQUI PUEDES PONER TU IMAGEN 🔥
-    # Sube tu imagen a Discord, copia el enlace y ponlo dentro de las comillas
     embed.set_image(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png") 
     
     recipes = [
