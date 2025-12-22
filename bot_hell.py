@@ -55,6 +55,7 @@ SHOP_CHANNEL_NAME = "「🔥」hell-store"
 # ==========================================
 # 🖼️ EMOJIS & DATA (BASE DE DATOS COMPLETA)
 # ==========================================
+# He cargado TU LISTA COMPLETA aquí. El bot la usa para todo.
 SERVER_EMOJIS = {
     "emoji_9": "<:emoji_9:868224374333919333>",
     "emoji_48": "<:emoji_48:926958427404648488>",
@@ -126,7 +127,7 @@ SERVER_EMOJIS = {
     "emoji_68": "<:emoji_68:1328804237546881126>",
     "emoji_69": "<:emoji_69:1328804255741771899>",
     "emoji_70": "<:emoji_70:1328804269683376150>",
-    "emoji_70_2": "<:emoji_70:1328804282199314484>",
+    "emoji_70_2": "<:emoji_70:1328804282199314484>", 
     "Blue_Arrow": "<:Blue_Arrow:1328804298951360605>",
     "emoji_72": "<:emoji_72:1328804312859672586>",
     "emoji_1": "<:emoji_1:1336377709923799193>",
@@ -176,13 +177,13 @@ SERVER_EMOJIS = {
     "cruz_hell": "<:cruz_hell:1450255934273355918>",
     "pikachu_culon": "<:pikachu_culon:1450624552827752479>",
     "Gift_hell": "<:Gift_hell:1450624953723654164>",
-    "party_new": "<:party:1450625235383488649>",
+    "party_new": "<:party:1450625235383488649>", # 🔥 RENOMBRADO PARA EVITAR CONFLICTOS
     "greenarrow": "<:greenarrow:1450625398051311667>",
     "Pokecoin": "<:Pokecoin:1450625492309901495>",
     "C4_HELL": "<:C4_HELL:1451357075321131049>"
 }
 
-# CONFIGURACIÓN VARIABLES EMOJIS (Usando el diccionario de arriba)
+# CONFIGURACIÓN VARIABLES EMOJIS (Usando el diccionario)
 HELL_ARROW = SERVER_EMOJIS["hell_arrow"]
 NOTIFICATION_ICON = SERVER_EMOJIS["notification"]
 CHECK_ICON = SERVER_EMOJIS["Check_hell"]
@@ -198,14 +199,14 @@ EMOJI_ANSWER     = SERVER_EMOJIS["greenarrow"]
 EMOJI_POINTS     = SERVER_EMOJIS["Pokecoin"]
 
 # EMOJIS GIVEAWAY & VAULT
-EMOJI_PARTY_NEW = SERVER_EMOJIS["party"] 
+EMOJI_PARTY_NEW = SERVER_EMOJIS["party_new"] # Usamos el del servidor correcto
 EMOJI_GIFT_NEW = SERVER_EMOJIS["Gift_hell"]
 EMOJI_FIRE_ANIM = SERVER_EMOJIS["emoji_9"]
 EMOJI_CLOCK_NEW = SERVER_EMOJIS["Purple_Clock"]
 EMOJI_VAULT_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 EMOJI_VAULT_CODE_ICON = SERVER_EMOJIS["emoji_69"]
 
-# 🔥 EMOJIS NUEVOS PARA EL FINAL DEL SORTEO 🔥
+# 🔥 EMOJIS FINALES DE SORTEO 🔥
 EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]
 EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 
@@ -261,6 +262,7 @@ async def save_giveaways_db():
 
 async def backup_points_task():
     await bot.wait_until_ready()
+    # 1. LOAD POINTS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -274,6 +276,7 @@ async def backup_points_task():
                         break
     except: pass
 
+    # 2. LOAD GIVEAWAYS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -300,6 +303,7 @@ async def backup_points_task():
     except Exception as e: 
         print(f"[DB ERROR] Giveaways load failed: {e}")
 
+    # Loop de guardado de puntos
     while not bot.is_closed():
         await asyncio.sleep(120) 
         try:
@@ -351,19 +355,15 @@ def parse_poll_result(content, winner_emoji):
     if not found: answer = s_emoji 
     return question, answer
 
-# 🔥 NUEVO CONVERTIDOR DE TIEMPO FLEXIBLE (Soporta espacios "3d 17h") 🔥
+# 🔥 NUEVO CONVERTIDOR DE TIEMPO FLEXIBLE
 def convert_time(time_str):
     time_regex = re.compile(r"(\d+)([smhd])")
     matches = time_regex.findall(time_str.lower().replace(" ", ""))
-    
     total_seconds = 0
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    
     if not matches: return -1
-    
     for amount, unit in matches:
         total_seconds += int(amount) * time_dict[unit]
-        
     return total_seconds
 
 async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_count):
@@ -838,7 +838,10 @@ async def show_recipes(ctx):
     embed = discord.Embed(title=f"{EMOJI_BLOOD} **HELL RECIPES** {EMOJI_BLOOD}", color=0x990000)
     embed.description = "Custom crafting recipes for this season."
     
-    # Lista de recetas
+    # 🔥 AQUI PUEDES PONER TU IMAGEN 🔥
+    # Sube tu imagen a Discord, copia el enlace y ponlo dentro de las comillas
+    embed.set_image(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png") 
+    
     recipes = [
         ("🍰 Sweet Veg. Cake", "50 Cementing Paste"),
         ("🥚 Kibble", "1 Fiber"),
@@ -855,7 +858,6 @@ async def show_recipes(ctx):
     ]
 
     for name, ingredients in recipes:
-        # Usamos HELL_ARROW para la flecha
         embed.add_field(name=f"**{name}**", value=f"{HELL_ARROW} {ingredients}", inline=True)
 
     embed.set_footer(text="Hell System • Crafting")
