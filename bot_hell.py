@@ -38,7 +38,7 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # IDs CHANNELS
-GIVEAWAY_CHANNEL_ID = 1449849645495746803 
+GIVEAWAY_CHANNEL_ID = 1449849645495746803 # Canal de Sponsors
 POLLS_CHANNEL_ID = 1449083865862770819       
 CMD_CHANNEL_ID = 1449346777659609288
 ROLES_CHANNEL_ID = 1449083960578670614
@@ -57,6 +57,7 @@ SHOP_CHANNEL_NAME = "「🔥」hell-store"
 # ==========================================
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
 
+# Emojis Generales
 HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
 NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
 CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
@@ -64,6 +65,7 @@ CROSS_ICON = "<a:cruz_hell:1450255934273355918>"
 EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
 EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
 
+# Emojis Minijuegos/Economía
 EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
 EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"      
 EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"          
@@ -71,12 +73,15 @@ EMOJI_WINNER     = "<a:party:1450625235383488649>"
 EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
 EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
 
-EMOJI_PARTY_NEW = "<a:party:1137005680520331304>"
-EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>"
-EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>"
-EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>"
-EMOJI_VAULT_WINNER_CROWN = "<a:yelow_crown:1219625559747858523>"
-EMOJI_VAULT_CODE_ICON = "<a:emoji_69:1328804255741771899>"
+# 🔥 EMOJIS NUEVOS (VAULT & GIVEAWAY) 🔥
+EMOJI_PARTY_NEW = "<a:party:1137005680520331304>" # Fiesta
+EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>" # Regalo
+EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>" # Fuego
+EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>" # Reloj
+
+# 🔥 EMOJIS DE LA VICTORIA DE LA CAJA (CORREGIDOS) 🔥
+EMOJI_VAULT_WINNER_CROWN = "<a:yelow_crown:1219625559747858523>" # Corona para Winner
+EMOJI_VAULT_CODE_ICON = "<a:emoji_69:1328804255741771899>"    # Diamante para Code
 
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
