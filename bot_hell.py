@@ -53,182 +53,167 @@ DB_CHANNEL_ID = 1451330350436323348
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ DATA & EMOJIS (CONFIGURACIÓN FÁCIL)
+# 🖼️ EMOJIS & DATA (BASE DE DATOS COMPLETA)
 # ==========================================
-# ¡COPIA EL ID DE LA CONSOLA AL INICIAR EL BOT Y PÉGALO AQUÍ!
+SERVER_EMOJIS = {
+    "emoji_9": "<:emoji_9:868224374333919333>",
+    "emoji_48": "<:emoji_48:926958427404648488>",
+    "Good_2": "<:Good_2:930098652804952074>",
+    "Red": "<:Red:931298336458301520>",
+    "Good": "<:Good:931298968250482768>",
+    "Green": "<:Green:931299102694715393>",
+    "Money": "<:Money:932019879287087164>",
+    "Paypal": "<:Paypal:1096357712289345566>",
+    "Red_Point": "<:Red_Point:1096357727334318210>",
+    "Withe_Point": "<:Withe_Point:1096357771462582332>",
+    "Black_Arrow": "<:Black_Arrow:1137005574744191047>",
+    "Withe_Arrow": "<:Withe_Arrow:1137005592100212746>",
+    "Emoji": "<:Emoji:1137005608697086092>",
+    "Anouncement": "<:Anouncement:1137005622160785418>",
+    "party": "<:party:1137005680520331304>",
+    "Owner": "<:Owner:1139164478324346911>",
+    "head": "<:head:1139301621378076812>",
+    "mod": "<:mod:1139305860703719566>",
+    "staff": "<:staff:1139305872682647737>",
+    "bot": "<:bot:1139305890915307541>",
+    "boost": "<:boost:1139305913530986596>",
+    "dono": "<:dono:1139305927103758336>",
+    "content_creator": "<:content_creator:1139305949295820820>",
+    "trial": "<:trial:1139353110406508584>",
+    "Admn": "<:Admn:1139353149505810563>",
+    "trusted": "<:trusted:1139353676620779520>",
+    "mele": "<:mele:1210301380389240902>",
+    "speed": "<:speed:1210301413276647514>",
+    "fabrication": "<:fabrication:1210301469203496970>",
+    "Oxigen": "<:Oxigen:1210317445840244736>",
+    "stamine": "<:stamine:1210317471475699782>",
+    "weight": "<:weight:1210317493072302190>",
+    "water": "<:water:1210317549946929192>",
+    "resistence": "<:resistence:1210317577134415912>",
+    "hell_arrow": "<:hell_arrow:1211049707128750080>",
+    "a_": "<:a_:1213917953976832122>",
+    "b_": "<:b_:1213917956736679986>",
+    "c_": "<:c_:1213917959899058176>",
+    "d_": "<:d_:1213917962352988282>",
+    "cyan_crown": "<:cyan_crown:1219625507243429968>",
+    "pink_crown": "<:pink_crown:1219625526550073385>",
+    "green_crown": "<:green_crown:1219625543314575483>",
+    "yelow_crown": "<:yelow_crown:1219625559747858523>",
+    "blue_crown": "<:blue_crown:1219625577082785854>",
+    "heal": "<:heal:1230917806548324393>",
+    "food": "<:food:1230924823874502726>",
+    "news": "<:news:1251202057982050439>",
+    "l_": "<:l_:1273343928678088734>",
+    "h_": "<:h_:1273343931215511572>",
+    "e_": "<:e_:1273343935133122601>",
+    "tiktok": "<:tiktok:1275469392188014633>",
+    "Red_line": "<:Red_line:1275469500585873462>",
+    "notification": "<:notification:1275469575638614097>",
+    "fire": "<:fire:1275469598183002183>",
+    "warn": "<:warn:1275471955138711572>",
+    "Thecenter": "<:Thecenter:1278828443924037685>",
+    "Ragnarock": "<:Ragnarock:1278829191357268070>",
+    "Fjord": "<:Fjord:1278829335888924733>",
+    "Abe": "<:Abe:1278829851813347348>",
+    "gen2": "<:gen2:1278829927818461314>",
+    "Theisland": "<:Theisland:1278830407038664775>",
+    "Lost": "<:Lost:1278830429385920513>",
+    "crystal": "<:crystal:1278830451901075599>",
+    "Valguero": "<:Valguero:1278831317831778334>",
+    "emoji_74": "<:emoji_74:1317875400419836016>",
+    "emoji_75": "<:emoji_75:1317875418782498858>",
+    "Black_Dot": "<:Black_Dot:1317875794823086080>",
+    "emoji_68": "<:emoji_68:1328804237546881126>",
+    "emoji_69": "<:emoji_69:1328804255741771899>",
+    "emoji_70": "<:emoji_70:1328804269683376150>",
+    "emoji_70_2": "<:emoji_70:1328804282199314484>",
+    "Blue_Arrow": "<:Blue_Arrow:1328804298951360605>",
+    "emoji_72": "<:emoji_72:1328804312859672586>",
+    "emoji_1": "<:emoji_1:1336377709923799193>",
+    "DediDot": "<:DediDot:1336377822872211496>",
+    "Blackline": "<:Blackline:1336817311931170877>",
+    "Yes": "<:Yes:1336817378893365469>",
+    "Check": "<:Check:1336817519364669511>",
+    "Promotion": "<:Promotion:1336817657844072598>",
+    "Mod": "<:Mod:1336818002506551449>",
+    "Rules": "<:Rules:1336818052465033236>",
+    "Purple_Clock": "<:Purple_Clock:1336818117094936587>",
+    "Communityowner": "<:Communityowner:1336818336423608414>",
+    "Dollar": "<:Dollar:1336818370066124822>",
+    "Dinos": "<:Dinos:1336818438315970661>",
+    "Blackcrown_2": "<:Blackcrown_2:1336818506284404846>",
+    "Blackcrown": "<:Blackcrown:1336818551218114592>",
+    "Red_Clock": "<:Red_Clock:1336818629743738963>",
+    "Partner": "<:Partner:1336818699327242361>",
+    "VIP": "<:VIP:1336818930785718413>",
+    "Blueline": "<:Blueline:1336819192133058631>",
+    "event_ping": "<:event_ping:1336821944036622467>",
+    "shadow_rightarrow": "<:shadow_rightarrow:1336822230256189532>",
+    "shadow_leftarrow": "<:shadow_leftarrow:1336822295389409321>",
+    "Raven_Bot": "<:Raven_Bot:1336822426402685038>",
+    "hype": "<:hype:1336822678501326949>",
+    "h_info": "<:h_info:1339334345181106287>",
+    "Yellow_Beacon": "<:Yellow_Beacon:1339348629814640672>",
+    "blue": "<:blue:1339348734282043535>",
+    "green": "<:green:1339349825782550609>",
+    "red": "<:red:1339349944741396590>",
+    "lazy_purple_drop": "<:lazy_purple_drop:1339350129810870307>",
+    "Dusk_WhiteDrop": "<:Dusk_WhiteDrop:1339350353711337553>",
+    "Dusk_dmgdebuff": "<:Dusk_dmgdebuff:1339353447346081893>",
+    "7SNHD_Arrow_Line": "<:7SNHD_Arrow_Line:1339355155052625930>",
+    "Dusk_YellowDrop": "<:Dusk_YellowDrop:1339361281278476360>",
+    "DevenDragon": "<:DevenDragon:1339368820825128991>",
+    "Purple_Alert": "<:Purple_Alert:1339372530628165633>",
+    "just_clout": "<:just_clout:1339375640062988340>",
+    "UCM_Genesis": "<:UCM_Genesis:1339379071024496653>",
+    "DevenScorchedEarth": "<:DevenScorchedEarth:1339379139701899265>",
+    "UCM_Extinction": "<:UCM_Extinction:1339379179602317433>",
+    "mels_blackdot": "<:mels_blackdot:1339621708633604155>",
+    "no_name": "<:no_name:1339625296365748297>",
+    "yt": "<:yt:1339655004683763773>",
+    "mels_BlackArrow": "<:mels_BlackArrow:1339656898324074517>",
+    "Check_hell": "<:Check_hell:1450255850508779621>",
+    "cruz_hell": "<:cruz_hell:1450255934273355918>",
+    "pikachu_culon": "<:pikachu_culon:1450624552827752479>",
+    "Gift_hell": "<:Gift_hell:1450624953723654164>",
+    "party_new": "<:party:1450625235383488649>",
+    "greenarrow": "<:greenarrow:1450625398051311667>",
+    "Pokecoin": "<:Pokecoin:1450625492309901495>",
+    "C4_HELL": "<:C4_HELL:1451357075321131049>"
+}
+
+# CONFIGURACIÓN VARIABLES EMOJIS (Usando el diccionario de arriba)
+HELL_ARROW = SERVER_EMOJIS["hell_arrow"]
+NOTIFICATION_ICON = SERVER_EMOJIS["notification"]
+CHECK_ICON = SERVER_EMOJIS["Check_hell"]
+CROSS_ICON = SERVER_EMOJIS["cruz_hell"]
+EMOJI_BLOOD = SERVER_EMOJIS["emoji_75"]
+EMOJI_CODE  = SERVER_EMOJIS["emoji_68"]
+
+EMOJI_DINO_TITLE = SERVER_EMOJIS["pikachu_culon"]
+EMOJI_REWARD     = SERVER_EMOJIS["Gift_hell"]
+EMOJI_CORRECT    = SERVER_EMOJIS["Good_2"]
+EMOJI_WINNER     = SERVER_EMOJIS["party_new"]
+EMOJI_ANSWER     = SERVER_EMOJIS["greenarrow"]
+EMOJI_POINTS     = SERVER_EMOJIS["Pokecoin"]
+
+# EMOJIS GIVEAWAY & VAULT
+EMOJI_PARTY_NEW = SERVER_EMOJIS["party"] 
+EMOJI_GIFT_NEW = SERVER_EMOJIS["Gift_hell"]
+EMOJI_FIRE_ANIM = SERVER_EMOJIS["emoji_9"]
+EMOJI_CLOCK_NEW = SERVER_EMOJIS["Purple_Clock"]
+EMOJI_VAULT_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
+EMOJI_VAULT_CODE_ICON = SERVER_EMOJIS["emoji_69"]
+
+# 🔥 EMOJIS NUEVOS PARA EL FINAL DEL SORTEO 🔥
+EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]    # El nuevo emoji para ENDED
+EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"] # La corona amarilla para ganadores
+
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
-
-HELL_ARROW = "<a:hell_arrow:1211049707128750080>"
-NOTIFICATION_ICON = "<a:notification:1275469575638614097>"
-CHECK_ICON = "<a:Check_hell:1450255850508779621>" 
-CROSS_ICON = "<a:cruz_hell:1450255934273355918>" 
-EMOJI_BLOOD = "<a:emoji_75:1317875418782498858>" 
-EMOJI_CODE  = "<a:emoji_68:1328804237546881126>" 
-
-EMOJI_DINO_TITLE = "<:pikachu_culon:1450624552827752479>" 
-EMOJI_REWARD     = "<a:Gift_hell:1450624953723654164>"      
-EMOJI_CORRECT    = "<a:Good_2:930098652804952074>"          
-EMOJI_WINNER     = "<a:party:1450625235383488649>"          
-EMOJI_ANSWER     = "<a:greenarrow:1450625398051311667>"     
-EMOJI_POINTS     = "<:Pokecoin:1450625492309901495>"        
-
-# 🔥 EMOJIS DE GIVEAWAY 🔥
-EMOJI_PARTY_NEW = "<a:party:1137005680520331304>" # Fiesta
-EMOJI_GIFT_NEW = "<a:Gift_hell:1450624953723654164>" # Regalo
-EMOJI_FIRE_ANIM = "<a:emoji_9:868224374333919333>" # Fuego
-EMOJI_CLOCK_NEW = "<a:Purple_Clock:1336818117094936587>" # Reloj
-
-# 🔥 EMOJIS DE VAULT 🔥
-EMOJI_VAULT_WINNER_CROWN = "<a:yelow_crown:1219625559747858523>" # Corona
-EMOJI_VAULT_CODE_ICON = "<a:emoji_69:1328804255741771899>"    # Diamante
-
 VAULT_IMAGE_URL = "https://ark.wiki.gg/images/thumb/8/88/Vault.png/300px-Vault.png"
 
 SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
 SUPPORT_ROLE_ID = 1336477737594130482
-
-DATA_TAMING = [
-    {"url": "https://ark.wiki.gg/images/e/e6/Raptor.png", "food": "Raw Meat", "name": "Raptor"},
-    {"url": "https://ark.wiki.gg/images/0/03/Rex.png", "food": "Raw Meat", "name": "T-Rex"},
-    {"url": "https://ark.wiki.gg/images/7/78/Carno.png", "food": "Raw Meat", "name": "Carnotaurus"},
-    {"url": "https://ark.wiki.gg/images/a/a8/Argentavis.png", "food": "Raw Meat", "name": "Argentavis"},
-    {"url": "https://ark.wiki.gg/images/2/2e/Pteranodon.png", "food": "Raw Meat", "name": "Pteranodon"},
-    {"url": "https://ark.wiki.gg/images/c/c1/Allosaurus.png", "food": "Raw Meat", "name": "Allosaurus"},
-    {"url": "https://ark.wiki.gg/images/4/47/Spino.png", "food": "Raw Meat", "name": "Spinosaurus"},
-    {"url": "https://ark.wiki.gg/images/9/9e/Giganotosaurus.png", "food": "Raw Meat", "name": "Giganotosaurus"},
-    {"url": "https://ark.wiki.gg/images/d/d8/Thylacoleo.png", "food": "Raw Meat", "name": "Thylacoleo"},
-    {"url": "https://ark.wiki.gg/images/4/4c/Yutyrannus.png", "food": "Raw Meat", "name": "Yutyrannus"},
-    {"url": "https://ark.wiki.gg/images/2/2f/Triceratops.png", "food": "Mejoberries", "name": "Triceratops"},
-    {"url": "https://ark.wiki.gg/images/1/12/Stegosaurus.png", "food": "Mejoberries", "name": "Stegosaurus"},
-    {"url": "https://ark.wiki.gg/images/0/07/Brontosaurus.png", "food": "Mejoberries", "name": "Brontosaurus"},
-    {"url": "https://ark.wiki.gg/images/5/5a/Parasaur.png", "food": "Mejoberries", "name": "Parasaur"},
-    {"url": "https://ark.wiki.gg/images/f/f3/Ankylosaurus.png", "food": "Mejoberries", "name": "Ankylosaurus"},
-    {"url": "https://ark.wiki.gg/images/c/c7/Doedicurus.png", "food": "Mejoberries", "name": "Doedicurus"},
-    {"url": "https://ark.wiki.gg/images/a/a9/Iguanodon.png", "food": "Mejoberries", "name": "Iguanodon"},
-    {"url": "https://ark.wiki.gg/images/3/38/Therizinosaurus.png", "food": "Mejoberries", "name": "Therizinosaurus"},
-    {"url": "https://ark.wiki.gg/images/4/45/Mammoth.png", "food": "Mejoberries", "name": "Mammoth"},
-    {"url": "https://ark.wiki.gg/images/3/36/Phiomia.png", "food": "Mejoberries", "name": "Phiomia"},
-]
-
-DATA_CRAFTING = [
-    {"url": "https://ark.wiki.gg/images/9/9a/Metal_Ingot.png", "mat": "Metal", "name": "Metal Ingot"},
-    {"url": "https://ark.wiki.gg/images/3/30/Flak_Chestpiece.png", "mat": "Metal", "name": "Flak Chestpiece"},
-    {"url": "https://ark.wiki.gg/images/7/72/Longneck_Rifle.png", "mat": "Metal", "name": "Longneck Rifle"},
-    {"url": "https://ark.wiki.gg/images/3/32/Metal_Pick.png", "mat": "Metal", "name": "Metal Pick"},
-    {"url": "https://ark.wiki.gg/images/5/54/Industrial_Forge.png", "mat": "Metal", "name": "Industrial Forge"},
-    {"url": "https://ark.wiki.gg/images/b/b9/Stone_Wall.png", "mat": "Stone/Wood", "name": "Stone Wall"},
-    {"url": "https://ark.wiki.gg/images/e/e3/Mortar_and_Pestle.png", "mat": "Stone/Wood", "name": "Mortar and Pestle"},
-    {"url": "https://ark.wiki.gg/images/1/1c/Campfire.png", "mat": "Stone/Wood", "name": "Campfire"},
-    {"url": "https://ark.wiki.gg/images/7/7c/Wooden_Foundation.png", "mat": "Stone/Wood", "name": "Wooden Foundation"},
-    {"url": "https://ark.wiki.gg/images/1/1a/Stone_Arrow.png", "mat": "Stone/Wood", "name": "Stone Arrow"},
-    {"url": "https://ark.wiki.gg/images/b/b4/Hide_Shirt.png", "mat": "Hide/Fiber", "name": "Hide Shirt"},
-    {"url": "https://ark.wiki.gg/images/a/a5/Cloth_Hat.png", "mat": "Hide/Fiber", "name": "Cloth Hat"},
-    {"url": "https://ark.wiki.gg/images/6/6d/Simple_Bed.png", "mat": "Hide/Fiber", "name": "Simple Bed"},
-    {"url": "https://ark.wiki.gg/images/8/88/Saddle.png", "mat": "Hide/Fiber", "name": "Saddle"},
-    {"url": "https://ark.wiki.gg/images/c/c2/Bola.png", "mat": "Hide/Fiber", "name": "Bola"},
-    {"url": "https://ark.wiki.gg/images/9/92/C4_Charge.png", "mat": "Advanced", "name": "C4 Charge"},
-    {"url": "https://ark.wiki.gg/images/f/f4/Assault_Rifle.png", "mat": "Advanced", "name": "Assault Rifle"},
-    {"url": "https://ark.wiki.gg/images/e/e8/Heavy_Auto_Turret.png", "mat": "Advanced", "name": "Heavy Auto Turret"},
-    {"url": "https://ark.wiki.gg/images/2/26/Cryopod.png", "mat": "Advanced", "name": "Cryopod"},
-    {"url": "https://ark.wiki.gg/images/3/37/Advanced_Rifle_Bullet.png", "mat": "Advanced", "name": "Adv. Rifle Bullet"},
-]
-
-DATA_BREEDING_IMGS = [
-    "https://ark.wiki.gg/images/e/e3/Fertilized_Rex_Egg.png",
-    "https://ark.wiki.gg/images/5/5d/Fertilized_Giganotosaurus_Egg.png",
-    "https://ark.wiki.gg/images/a/a8/Fertilized_Wyvern_Egg_%28Fire%29.png",
-    "https://ark.wiki.gg/images/f/f2/Fertilized_Rock_Drake_Egg.png",
-    "https://ark.wiki.gg/images/c/c8/Fertilized_Spino_Egg.png",
-    "https://ark.wiki.gg/images/9/9d/Fertilized_Bronto_Egg.png",
-    "https://ark.wiki.gg/images/0/0e/Fertilized_Trike_Egg.png",
-    "https://ark.wiki.gg/images/b/b0/Fertilized_Stego_Egg.png",
-    "https://ark.wiki.gg/images/2/22/Fertilized_Ankylo_Egg.png",
-    "https://ark.wiki.gg/images/d/d4/Fertilized_Raptor_Egg.png",
-    "https://ark.wiki.gg/images/2/2b/Fertilized_Argentavis_Egg.png",
-    "https://ark.wiki.gg/images/9/90/Fertilized_Pteranodon_Egg.png",
-    "https://ark.wiki.gg/images/e/e9/Fertilized_Quetzal_Egg.png",
-    "https://ark.wiki.gg/images/3/31/Fertilized_Therizino_Egg.png",
-    "https://ark.wiki.gg/images/a/a5/Fertilized_Yutyrannus_Egg.png",
-    "https://ark.wiki.gg/images/c/c2/Fertilized_Allosaurus_Egg.png",
-    "https://ark.wiki.gg/images/8/8e/Fertilized_Baryonyx_Egg.png",
-    "https://ark.wiki.gg/images/6/61/Fertilized_Carnotaurus_Egg.png",
-    "https://ark.wiki.gg/images/0/04/Fertilized_Deinonychus_Egg.png",
-    "https://ark.wiki.gg/images/3/39/Fertilized_Magmasaur_Egg.png"
-]
-
-DATA_ALPHAS = [
-    {"url": "https://ark.wiki.gg/images/5/53/Alpha_Raptor.png", "name": "Alpha Raptor", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
-    {"url": "https://ark.wiki.gg/images/e/eb/Alpha_Carno.png", "name": "Alpha Carno", "win": 200, "loss": 200, "chance": 0.70, "color": discord.Color.green()},
-    {"url": "https://ark.wiki.gg/images/0/03/Alpha_T-Rex.png", "name": "Alpha T-Rex", "win": 300, "loss": 300, "chance": 0.50, "color": discord.Color.gold()},
-    {"url": "https://ark.wiki.gg/images/4/4d/Alpha_Megalodon.png", "name": "Alpha Megalodon", "win": 300, "loss": 300, "chance": 0.50, "color": discord.Color.gold()},
-    {"url": "https://ark.wiki.gg/images/a/a2/Alpha_Fire_Wyvern.png", "name": "Alpha Wyvern", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
-    {"url": "https://ark.wiki.gg/images/e/e3/Alpha_Basilisk.png", "name": "Alpha Basilisk", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
-    {"url": "https://ark.wiki.gg/images/d/db/Alpha_Surface_Reaper_King.png", "name": "Alpha Reaper", "win": 400, "loss": 400, "chance": 0.40, "color": discord.Color.red()},
-    {"url": "https://ark.wiki.gg/images/f/f6/Alpha_Mosasaur.png", "name": "Alpha Mosasaur", "win": 500, "loss": 500, "chance": 0.30, "color": discord.Color.purple()},
-    {"url": "https://ark.wiki.gg/images/8/85/Alpha_Tusoteuthis.png", "name": "Alpha Tusoteuthis", "win": 500, "loss": 500, "chance": 0.30, "color": discord.Color.purple()},
-]
-
-DATA_POKEMON = [
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", "type": "Fire", "name": "Charizard"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/59.png", "type": "Fire", "name": "Arcanine"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/257.png", "type": "Fire", "name": "Blaziken"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png", "type": "Fire", "name": "Charmander"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/38.png", "type": "Fire", "name": "Ninetales"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/136.png", "type": "Fire", "name": "Flareon"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/9.png", "type": "Water", "name": "Blastoise"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/130.png", "type": "Water", "name": "Gyarados"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/134.png", "type": "Water", "name": "Vaporeon"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png", "type": "Water", "name": "Squirtle"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/55.png", "type": "Water", "name": "Golduck"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/245.png", "type": "Water", "name": "Suicune"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/260.png", "type": "Water", "name": "Swampert"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/3.png", "type": "Grass", "name": "Venusaur"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png", "type": "Grass", "name": "Bulbasaur"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/154.png", "type": "Grass", "name": "Meganium"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/254.png", "type": "Grass", "name": "Sceptile"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/45.png", "type": "Grass", "name": "Vileplume"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/152.png", "type": "Grass", "name": "Chikorita"},
-    {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/251.png", "type": "Grass", "name": "Celebi"},
-]
-
-ROLES_CONFIG = {
-    "Ping": 1199101577127014541,
-    "Wipes": 1210709945339875328,
-    "News": 1210710127871787050,
-    "Rollbacks": 1210710910499299349,
-    "Events": 1326887310331220028,
-    "Giveaways": 1326887498856661053,
-    "Announcements": 1326887647406329918,
-    "Polls": 1326887768923701300,
-    "Ban / Warns": 1326887925547274250,
-    "Patches": 1326888505216864361
-}
-
-SHOP_ITEMS = [
-    {"name": "1 BP", "price": 15000, "desc": "Random High Quality Blueprint"},
-    {"name": "1 Paint for Dino", "price": 15000, "desc": "Custom Dino Coloring"},
-    {"name": "1 Breed", "price": 30000, "desc": "Dino Breeding Service"},
-    {"name": "1 Ascension", "price": 30000, "desc": "Boss Ascension Unlock"},
-    {"name": "1 Dedi", "price": 45000, "desc": "Tek Dedicated Storage"},
-    {"name": "1 Ammo Dedi", "price": 45000, "desc": "Dedicated Storage full of Ammo"},
-    {"name": "5€ Credit", "price": 45000, "desc": "Store Credit"},
-    {"name": "1 Modded Cave", "price": 80000, "desc": "Exclusive Cave Location"},
-    {"name": "25€ Credit", "price": 300000, "desc": "Store Credit"},
-    {"name": "Private Map", "price": 500000, "desc": "Private Map Access"},
-    {"name": "Reaper Queen", "price": 1000000, "desc": "R-Reaper Queen Tame"}
-]
-
-ARK_DINOS = [
-    "Tyrannosaurus", "Giganotosaurus", "Raptor", "Argentavis", "Pteranodon", 
-    "Triceratops", "Stegosaurus", "Spinosaurus", "Allosaurus", "Ankylosaurus", 
-    "Brontosaurus", "Carnotaurus", "Dilophosaurus", "Dimorphodon", "Direwolf", 
-    "Doedicurus", "Dunkleosteus", "Gallimimus", "Griffin", "Ichthyosaurus", 
-    "Iguanodon", "Kairuku", "Kaprosuchus", "Lystrosaurus", "Mammoth", 
-    "Megalodon", "Megatherium", "Moschops", "Oviraptor", "Parasaur", 
-    "Pegomastax", "Phiomia", "Procoptodon", "Quetzal", "Sarcosuchus", 
-    "Tapejara", "Terror Bird", "Therizinosaurus", "Thylacoleo", "Titanoboa", 
-    "Troodon", "Wyvern", "Yutyrannus", "Velonasaur", "Snow Owl", "Managarmr"
-]
 
 # --- STATES (GLOBAL) ---
 vault_state = {
@@ -276,7 +261,6 @@ async def save_giveaways_db():
 
 async def backup_points_task():
     await bot.wait_until_ready()
-    # 1. LOAD POINTS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -290,7 +274,6 @@ async def backup_points_task():
                         break
     except: pass
 
-    # 2. LOAD GIVEAWAYS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -307,7 +290,6 @@ async def backup_points_task():
             
             if found_gw:
                 for msg_id, data in list(giveaways_data.items()):
-                    # Reactivar tareas de sorteo
                     bot.loop.create_task(run_giveaway_timer(
                         int(data["channel_id"]), 
                         int(msg_id), 
@@ -318,7 +300,6 @@ async def backup_points_task():
     except Exception as e: 
         print(f"[DB ERROR] Giveaways load failed: {e}")
 
-    # Loop de guardado de puntos
     while not bot.is_closed():
         await asyncio.sleep(120) 
         try:
@@ -415,10 +396,11 @@ async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_co
         
         embed = msg.embeds[0]
         embed.color = discord.Color.greyple()
+        # 🔥 AQUÍ SE HAN CAMBIADO LOS EMOJIS 🔥
         embed.description = (
             f"{EMOJI_GIFT_NEW} **Prize:** {prize}\n"
-            f"🛑 **ENDED**\n"
-            f"👑 **Winners:** {winners_text}"
+            f"{EMOJI_GIVEAWAY_ENDED_RED} **ENDED**\n"
+            f"{EMOJI_GIVEAWAY_WINNER_CROWN} **Winners:** {winners_text}"
         )
         await msg.edit(embed=embed)
         await channel.send(f"🎉 **CONGRATULATIONS** {winners_text}! You won **{prize}**!")
@@ -872,22 +854,17 @@ async def event_vault(interaction: discord.Interaction, code: str, prize: str):
     vault_state["hints_task"] = asyncio.create_task(manage_vault_hints(ch, msg, code))
     await interaction.followup.send("✅ Started")
 
-# ------------------------------------------------------------------
-# 🔥 COMANDO REESCRITO: start_giveaway (CON PERSISTENCIA Y ANTI-BOT)
-# ------------------------------------------------------------------
 @bot.tree.command(name="start_giveaway")
 async def start_giveaway(interaction: discord.Interaction, time_str: str, prize: str, winners: int = 1):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
         return
 
-    # 1. Convertir Tiempo
     seconds = convert_time(time_str)
     if seconds < 0:
-        await interaction.response.send_message("❌ Tiempo inválido. Usa formato `10m`, `1h`, `2d`.", ephemeral=True)
+        await interaction.response.send_message("❌ Tiempo inválido. Usa formato `3d`, `10m`, `3d 10h`.", ephemeral=True)
         return
 
-    # 2. Configurar Embed (Sponsor vs Normal)
     is_sponsor_channel = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
     if is_sponsor_channel:
         embed_color = 0x990000
@@ -898,7 +875,6 @@ async def start_giveaway(interaction: discord.Interaction, time_str: str, prize:
         embed_title = f"{EMOJI_PARTY_NEW} GIVEAWAY"
         footer_text = "Hell System • Giveaway"
 
-    # Calcular Timestamp para la cuenta atrás de Discord
     end_timestamp = int(time.time() + seconds)
     
     embed = discord.Embed(title=embed_title, color=embed_color)
@@ -914,7 +890,6 @@ async def start_giveaway(interaction: discord.Interaction, time_str: str, prize:
     msg = await interaction.original_response()
     await msg.add_reaction(EMOJI_PARTY_NEW)
 
-    # 3. GUARDAR EN DB Y ARRANCAR
     giveaways_data[str(msg.id)] = {
         "channel_id": interaction.channel_id,
         "end_time": end_timestamp,
@@ -993,14 +968,6 @@ async def on_ready():
     try: await bot.tree.sync()
     except: pass
     
-    # 🔴 HERRAMIENTA DE EMOJIS (SOLO IMPRIME EN CONSOLA)
-    print("\n--- LISTA DE EMOJIS DEL SERVIDOR ---")
-    for guild in bot.guilds:
-        print(f"Servidor: {guild.name}")
-        for emoji in guild.emojis:
-            print(f"Nombre: {emoji.name} | ID: {emoji.id} | Código: <:{emoji.name}:{emoji.id}>")
-    print("------------------------------------\n")
-
     bot.loop.create_task(backup_points_task())
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
@@ -1092,7 +1059,6 @@ async def on_member_update(before, after):
 @bot.event
 async def on_message(message):
     if message.channel.id == CMD_CHANNEL_ID:
-        # A) BOTS (Borrar tras 2min, salvo menú)
         if message.author.bot:
             if message.author == bot.user and message.embeds:
                 if "SERVER COMMANDS" in (message.embeds[0].title or ""):
@@ -1100,7 +1066,6 @@ async def on_message(message):
             await message.delete(delay=120)
             return
 
-        # B) USUARIOS
         if message.type == discord.MessageType.chat_input_command:
             return 
 
