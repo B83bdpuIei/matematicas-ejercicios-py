@@ -6,10 +6,6 @@ import re
 import random
 import config 
 
-# ==========================================
-# 🛠️ UTILS & MODALS
-# ==========================================
-
 class EmbedBuilderModal(discord.ui.Modal):
     def __init__(self, mode="create", existing_data=None, embed_name=None):
         super().__init__(title=f"{mode.capitalize()} Embed")
@@ -20,7 +16,7 @@ class EmbedBuilderModal(discord.ui.Modal):
         self.e_name = discord.ui.TextInput(label="ID Name (No spaces)", placeholder="e.g., rules_v1", required=True, default=embed_name if embed_name else "")
         self.e_title = discord.ui.TextInput(label="Title", required=False, default=existing_data.get("title", "") if existing_data else "")
         self.e_desc = discord.ui.TextInput(label="Description", style=discord.TextStyle.paragraph, required=True, default=existing_data.get("description", "") if existing_data else "")
-        self.e_color = discord.ui.TextInput(label="Color (Hex or Name)", placeholder="Red, Blue, Purple, Gold...", required=False, default=existing_data.get("color_str", "") if existing_data else "")
+        self.e_color = discord.ui.TextInput(label="Color", placeholder="Red, Blue, Purple, Gold...", required=False, default=existing_data.get("color_str", "") if existing_data else "")
         self.e_image = discord.ui.TextInput(label="Image URL", required=False, default=existing_data.get("image", "") if existing_data else "")
 
         self.add_item(self.e_name)
@@ -30,14 +26,13 @@ class EmbedBuilderModal(discord.ui.Modal):
         self.add_item(self.e_image)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Improved Color Parsing
         c_val = 0x2b2d31 
         c_str = self.e_color.value.strip().lower()
         
         colors = {
             "red": 0x990000, "blue": 0x0000FF, "green": 0x00FF00, "gold": 0xFFD700,
             "orange": 0xFFA500, "purple": 0x800080, "yellow": 0xFFFF00, "white": 0xFFFFFF,
-            "black": 0x000000, "pink": 0xFFC0CB, "cyan": 0x00FFFF
+            "black": 0x000000, "pink": 0xFFC0CB, "cyan": 0x00FFFF, "dark": 0x2b2d31
         }
         
         if c_str.startswith("#"): 
@@ -96,7 +91,6 @@ class AutoSendModal(discord.ui.Modal, title="⏰ Configure AutoSend"):
         config.autosend_data[uid] = {"embed": self.embed_name, "time": t, "channel": cid}
         await interaction.response.send_message(f"✅ AutoSend: `{self.embed_name}` at `{t}` in `{cid}`.", ephemeral=True)
 
-# --- 4. MENU CREATION WIZARD (NEW & IMPROVED) ---
 class MenuOptionModal(discord.ui.Modal, title="Add Option to Menu"):
     def __init__(self, view_ref, target_embed):
         super().__init__()
@@ -115,7 +109,6 @@ class MenuBuilderView(discord.ui.View):
         self.main_embed = main_embed
         self.options_list = []
         
-        # Select for picking which embed to link
         options = []
         for name in list(config.embeds_data.keys())[:25]:
             options.append(discord.SelectOption(label=name, value=name))
@@ -132,7 +125,7 @@ class MenuBuilderView(discord.ui.View):
     async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.options_list: return await interaction.response.send_message("❌ No options added.", ephemeral=True)
         
-        await interaction.response.send_message("⬇️ Type Channel ID to send:", ephemeral=True)
+        await interaction.response.send_message("⬇️ Type Channel ID to send (Ephemeral):", ephemeral=True)
         def check(m): return m.author == interaction.user and m.channel == interaction.channel
         try:
             msg = await interaction.client.wait_for('message', check=check, timeout=30)
@@ -154,7 +147,6 @@ class MenuBuilderView(discord.ui.View):
             except: pass
         except: await interaction.followup.send("❌ Cancelled/Invalid ID", ephemeral=True)
 
-# --- 5. SELECTOR VIEW ---
 class EmbedSelectorView(discord.ui.View):
     def __init__(self, action, bot_ref=None):
         super().__init__(timeout=None)
@@ -162,16 +154,14 @@ class EmbedSelectorView(discord.ui.View):
         self.bot_ref = bot_ref
         
         options = []
-        # Populate with existing embeds
-        for name in list(config.embeds_data.keys())[:25]: 
-            options.append(discord.SelectOption(label=name, value=name))
         
-        # For Autosend Disable, populate with tasks
         if action == "disable_auto":
-            options = []
             for uid in list(config.autosend_data.keys())[:25]:
                 options.append(discord.SelectOption(label=uid, value=uid))
             if not options: options.append(discord.SelectOption(label="No tasks", value="none"))
+        else:
+            for name in list(config.embeds_data.keys())[:25]: 
+                options.append(discord.SelectOption(label=name, value=name))
 
         self.select = discord.ui.Select(placeholder="Select...", options=options, disabled=(not options or options[0].value=="none"))
         self.select.callback = self.callback
@@ -201,7 +191,7 @@ class EmbedSelectorView(discord.ui.View):
                     if d["image"]: embed.set_image(url=d["image"])
                     embed.set_footer(text=d["footer"])
                     await ch.send(embed=embed)
-                    await interaction.followup.send("✅ Sent.")
+                    await interaction.followup.send("✅ Sent.", ephemeral=True)
                 try: await msg.delete() 
                 except: pass
             except: pass
@@ -214,10 +204,8 @@ class EmbedSelectorView(discord.ui.View):
             await interaction.response.edit_message(content=f"✅ Task `{val}` removed.", view=None)
 
         elif self.action == "menu_wizard":
-            # Start Menu Wizard
             await interaction.response.edit_message(content=f"✅ Main Embed: `{val}`\nAdd options below:", view=MenuBuilderView(val))
 
-# --- MAIN MENU ---
 class EmbedManagerView(discord.ui.View):
     def __init__(self, bot_ref):
         super().__init__(timeout=None)
@@ -241,7 +229,6 @@ class EmbedManagerView(discord.ui.View):
             txt = "\n".join([f"`{k}`" for k in config.embeds_data.keys()]) or "None"
             await interaction.response.send_message(f"**📚 Embeds:**\n{txt}", ephemeral=True)
         else:
-            # Map action to selector type
             act_map = {
                 "edit": "edit", "send": "send", "delete": "delete", 
                 "auto": "auto", "menu": "menu_wizard", "no_auto": "disable_auto"
@@ -287,6 +274,9 @@ class Embeds(commands.Cog):
     @tasks.loop(minutes=1)
     async def autosend_loop(self):
         now = datetime.datetime.now().strftime("%H:%M")
+        # Log para depurar en Render si no envía nada
+        print(f"[AUTOSEND] Checking tasks for {now}...") 
+        
         for uid, data in config.autosend_data.items():
             if data["time"] == now:
                 try:
@@ -297,7 +287,9 @@ class Embeds(commands.Cog):
                         if d["image"]: embed.set_image(url=d["image"])
                         embed.set_footer(text=d["footer"])
                         await channel.send(embed=embed)
-                except: pass
+                        print(f"[AUTOSEND] Enviado {data['embed']}")
+                except Exception as e:
+                    print(f"[AUTOSEND ERROR] {e}")
 
     @autosend_loop.before_loop
     async def before_autosend(self): await self.bot.wait_until_ready()
