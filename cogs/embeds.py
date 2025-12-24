@@ -274,10 +274,8 @@ class Embeds(commands.Cog):
     @tasks.loop(minutes=1)
     async def autosend_loop(self):
         now = datetime.datetime.now().strftime("%H:%M")
-        # Log para depurar en Render si no envía nada
-        print(f"[AUTOSEND] Checking tasks for {now}...") 
-        
-        for uid, data in config.autosend_data.items():
+        # Copia de seguridad de la lista para iterar sin errores
+        for uid, data in list(config.autosend_data.items()):
             if data["time"] == now:
                 try:
                     channel = self.bot.get_channel(int(data["channel"]))
@@ -287,7 +285,7 @@ class Embeds(commands.Cog):
                         if d["image"]: embed.set_image(url=d["image"])
                         embed.set_footer(text=d["footer"])
                         await channel.send(embed=embed)
-                        print(f"[AUTOSEND] Enviado {data['embed']}")
+                        print(f"[AUTOSEND] Sent {data['embed']} to {data['channel']}")
                 except Exception as e:
                     print(f"[AUTOSEND ERROR] {e}")
 
