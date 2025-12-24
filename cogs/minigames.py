@@ -30,7 +30,7 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             uid = str(interaction.user.id)
             config.points_data[uid] = config.points_data.get(uid, 0) + points_won
             
-            try: await interaction.response.send_message(f"{config.EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
+            try: await interaction.response.send_message(f"{config.EMOJI_CORRECT} **CORRECT!**", ephemeral=True)
             except: pass
 
             embed = discord.Embed(color=0x00FF00)
@@ -87,7 +87,7 @@ class ArkDropView(discord.ui.View):
             embed.color = discord.Color.dark_grey()
             embed.set_footer(text=f"Claimed by: {interaction.user.display_name} (+200 Points)")
             await interaction.response.edit_message(embed=embed, view=self)
-            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop and won 200 points!", ephemeral=False)
+            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop!", ephemeral=False)
             self.stop()
         except: pass
 
@@ -209,7 +209,7 @@ class PokemonVisualView(discord.ui.View):
 class Minigames(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Definimos las variables de estado AQUÍ, no en config
+        # VARIABLES LOCALES PARA EVITAR ERROR EN CONFIG
         self.last_dino_msg = None
         self.last_minigame_msg = None
         
@@ -238,34 +238,41 @@ class Minigames(commands.Cog):
     # --- DINO LOOP ---
     @tasks.loop(minutes=20)
     async def dino_game_loop(self):
-        channel = self.bot.get_channel(config.DINO_CHANNEL_ID)
-        if not channel: return
-        
-        if self.last_dino_msg:
-            try: await self.last_dino_msg.edit(view=None)
-            except: pass
+        try:
+            channel = self.bot.get_channel(config.DINO_CHANNEL_ID)
+            if not channel: return
+            
+            # Usamos self.last_dino_msg en vez de config
+            if self.last_dino_msg:
+                try: await self.last_dino_msg.edit(view=None)
+                except: pass
 
-        dino_real_name = random.choice(config.ARK_DINOS)
-        scrambled_name = "".join(random.sample(list(dino_real_name.upper()), len(dino_real_name)))
-        
-        embed = discord.Embed(title=f"{config.EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
-        embed.description = f"Unscramble the name of this creature!\n\n🧩 **SCRAMBLED:** `{scrambled_name}`\n\nClick the button to answer."
-        embed.set_footer(text="Hell System • Dino Games")
-        view = DinoView(correct_dino=dino_real_name)
-        
-        self.last_dino_msg = await channel.send(embed=embed, view=view)
+            dino_real_name = random.choice(config.ARK_DINOS)
+            scrambled_name = "".join(random.sample(list(dino_real_name.upper()), len(dino_real_name)))
+            
+            embed = discord.Embed(title=f"{config.EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
+            embed.description = f"Unscramble the name of this creature!\n\n🧩 **SCRAMBLED:** `{scrambled_name}`\n\nClick the button to answer."
+            embed.set_footer(text="Hell System • Dino Games")
+            view = DinoView(correct_dino=dino_real_name)
+            
+            self.last_dino_msg = await channel.send(embed=embed, view=view)
+        except Exception as e:
+            print(f"[ERROR] Dino Loop: {e}")
 
     # --- MINIGAMES LOOP ---
     @tasks.loop(minutes=5)
     async def minigames_auto_loop(self):
-        channel = self.bot.get_channel(config.MINIGAMES_CHANNEL_ID)
-        if not channel: return
-        
-        if self.last_minigame_msg:
-            try: await self.last_minigame_msg.edit(view=None)
-            except: pass 
-        
-        self.last_minigame_msg = await self.spawn_game(channel)
+        try:
+            channel = self.bot.get_channel(config.MINIGAMES_CHANNEL_ID)
+            if not channel: return
+            
+            if self.last_minigame_msg:
+                try: await self.last_minigame_msg.edit(view=None)
+                except: pass 
+            
+            self.last_minigame_msg = await self.spawn_game(channel)
+        except Exception as e:
+            print(f"[ERROR] Minigames Loop: {e}")
 
     async def spawn_game(self, channel):
         game_type = random.randint(1, 6)
