@@ -14,7 +14,7 @@ import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER
+# 🚑 FAKE WEB SERVER (Mantiene el bot 24/7)
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -150,7 +150,7 @@ EMOJI_VAULT_CODE_ICON = SERVER_EMOJIS["emoji_69"]
 EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]
 EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 
-# EMOJIS MODAL VAULT
+# 🔥 EMOJIS MODAL VAULT NUEVOS 🔥
 EMOJI_VAULT_WAIT = SERVER_EMOJIS["Red_Clock"]
 EMOJI_VAULT_DENIED = SERVER_EMOJIS["warn"]
 
@@ -276,26 +276,37 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🧩 HELPER FUNCTIONS
+# 🧩 HELPER FUNCTIONS (CORREGIDO PARSE POLL)
 # ==========================================
 def parse_poll_result(content, winner_emoji):
     lines = content.split('\n')
     question = "Pregunta desconocida"
     answer = "Respuesta desconocida"
+    
     for line in lines:
+         # Buscamos la línea que tiene la flecha o empieza por >
          if "hell_arrow" in line or line.strip().startswith(">"):
+             # Limpiamos todos los adornos sucios
              clean_q = line.replace("<a:hell_arrow:1334124040960610336>", "") 
              clean_q = clean_q.replace("<a:hell_arrow:1211049707128750080>", "") 
-             clean_q = clean_q.replace(">", "").replace("*", "").strip()
+             clean_q = clean_q.replace(">", "")
+             clean_q = clean_q.replace("*", "") # Quitamos negritas viejas
+             clean_q = clean_q.replace("_", "") # Quitamos subrayados viejos
+             clean_q = clean_q.strip()
              question = clean_q
              break
+             
     s_emoji = str(winner_emoji)
     found = False
     for line in lines:
         if s_emoji in line:
             answer = line.replace(s_emoji, "").strip()
+            # Quitamos guiones o decoraciones extra
+            if answer.startswith("-") or answer.startswith(":"):
+                answer = answer[1:].strip()
             found = True
             break
+            
     if not found: answer = s_emoji 
     return question, answer
 
@@ -897,7 +908,7 @@ async def start_giveaway(interaction: discord.Interaction, time_str: str, prize:
         winners
     ))
 
-@bot.tree.command(name="finish_polls", description="Publica resultados limpios.")
+@bot.tree.command(name="finish_polls", description="Publica resultados SOLO del día de la última encuesta.")
 async def finish_polls(interaction: discord.Interaction):
     try:
         await interaction.response.defer()
@@ -913,41 +924,68 @@ async def finish_polls(interaction: discord.Interaction):
         await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.", ephemeral=True)
         return
 
-    results_text = ""
-    count = 0
-    reference_date = None
-
-    async for message in polls_channel.history(limit=200):
-        if not message.content or not message.reactions: continue 
-        if "----" in message.content and len(message.content) < 30: continue
-
-        msg_date = message.created_at.date()
-        if reference_date is None: reference_date = msg_date
-
-        winner_reaction = max(message.reactions, key=lambda r: r.count)
-
-        if winner_reaction.count > 1:
-            question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
-            results_text += f"{HELL_ARROW} **{question}** : {answer_text}\n"
-            count += 1
-
-    if count == 0:
-        await interaction.followup.send("⚠️ No encontré resultados recientes.", ephemeral=True)
+    # 1. Obtener la fecha de referencia del ÚLTIMO mensaje del canal
+    target_date = None
+    async for last_msg in polls_channel.history(limit=1):
+        target_date = last_msg.created_at.date()
+    
+    if not target_date:
+        await interaction.followup.send("⚠️ El canal está vacío.", ephemeral=True)
         return
 
-    MAX_LENGTH = 3500 
-    header = f"📢 **POLL RESULTS**\n📅 {reference_date}\n\n"
-    full_content = header + results_text
+    results_list = []
+    
+    # 2. Buscar solo mensajes que coincidan con esa fecha
+    # Limitamos a 50 para no saturar, pero pararemos antes si cambia la fecha
+    async for message in polls_channel.history(limit=50):
+        # Si el mensaje es de un día diferente al último, PARAMOS de buscar
+        if message.created_at.date() != target_date:
+            break 
 
-    if len(full_content) <= MAX_LENGTH:
-        embed = discord.Embed(description=full_content, color=0x990000)
+        if not message.content or not message.reactions: continue 
+        # Filtro para ignorar mensajes de separacion "----"
+        if "----" in message.content and len(message.content) < 30: continue
+
+        # Buscar ganador
+        try:
+            winner_reaction = max(message.reactions, key=lambda r: r.count)
+        except:
+            continue # Si no hay reacciones, saltamos
+
+        # Solo si tiene votos (count > 1 porque el bot cuenta como 1 a veces)
+        if winner_reaction.count >= 1: 
+            question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
+            # Formato FINAL: Flecha + Negrita (sin subrayar) + Respuesta
+            line = f"{HELL_ARROW} **{question}** : {answer_text}"
+            results_list.append(line)
+
+    if not results_list:
+        await interaction.followup.send(f"⚠️ No encontré encuestas válidas para la fecha {target_date}.", ephemeral=True)
+        return
+
+    # 3. Invertir la lista para que salga de la primera a la última
+    results_list.reverse()
+    
+    full_content = "\n".join(results_list)
+    
+    # Cabecera
+    header = f"📢 **POLL RESULTS**\n📅 {target_date}\n\n"
+    final_text = header + full_content
+
+    # 4. Enviar (Gestión de límite de 4096 caracteres)
+    if len(final_text) <= 4000:
+        embed = discord.Embed(description=final_text, color=0x990000)
         embed.set_footer(text="Hell System polls")
         await interaction.followup.send(embed=embed)
     else:
-        chunks = [full_content[i:i+MAX_LENGTH] for i in range(0, len(full_content), MAX_LENGTH)]
+        # Si es MUY largo, cortamos (aunque al filtrar por día es raro que pase)
+        chunks = [final_text[i:i+4000] for i in range(0, len(final_text), 4000)]
         for i, chunk in enumerate(chunks):
             embed = discord.Embed(description=chunk, color=0x990000)
-            embed.set_footer(text=f"Page {i+1} • Hell System")
+            if i == 0:
+                embed.set_footer(text="Hell System polls (Parte 1)")
+            else:
+                embed.set_footer(text=f"Hell System polls (Parte {i+1})")
             await interaction.followup.send(embed=embed)
 
 # ==========================================
