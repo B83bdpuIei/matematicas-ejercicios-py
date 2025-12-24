@@ -9,10 +9,6 @@ import random
 import re
 import config
 
-# ==========================================
-# 🛠️ HELPER FUNCTIONS
-# ==========================================
-
 def convert_time(time_str):
     time_regex = re.compile(r"(\d+)([smhd])")
     matches = time_regex.findall(time_str.lower().replace(" ", ""))
@@ -27,46 +23,34 @@ def parse_poll_result(content, winner_emoji):
     lines = content.split('\n')
     question = "Unknown Question"
     answer = "Unknown Answer"
-    
     for line in lines:
-         # Detect line with arrow (ignoring emoji ID variations)
          if "hell_arrow" in line or line.strip().startswith(">"):
-             # Clean all discord markdown and custom emojis
-             clean_q = re.sub(r'<a?:[^:]+:[0-9]+>', '', line) # Remove emojis
+             clean_q = re.sub(r'<a?:[^:]+:[0-9]+>', '', line)
              clean_q = clean_q.replace(">", "").replace("*", "").replace("_", "").strip()
              if clean_q: question = clean_q
              break
-             
     s_emoji = str(winner_emoji)
     found = False
     for line in lines:
         if s_emoji in line:
             answer = line.replace(s_emoji, "").strip()
-            # Clean starting dash or colon
             if answer.startswith("-") or answer.startswith(":"): answer = answer[1:].strip()
             found = True
             break
     if not found: answer = s_emoji 
     return question, answer
 
-# ==========================================
-# 🏦 VAULT VIEWS & MODALS
-# ==========================================
-
 class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
-
     async def on_submit(self, interaction: discord.Interaction):
         user_id = interaction.user.id
         current_time = time.time()
         
-        # Check Cooldown
         if user_id in config.user_cooldowns:
             remaining = 15 - (current_time - config.user_cooldowns[user_id])
             if remaining > 0:
                 await interaction.response.send_message(f"{config.EMOJI_VAULT_WAIT} Wait **{int(remaining)}s**...", ephemeral=True)
                 return
-        
         config.user_cooldowns[user_id] = current_time
 
         if not config.vault_state["active"]:
@@ -77,11 +61,9 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             config.vault_state["active"] = False 
             if config.vault_state["hints_task"]: config.vault_state["hints_task"].cancel()
             
-            # Points
             uid = str(user_id)
             config.points_data[uid] = config.points_data.get(uid, 0) + 2000
             
-            # Disable Button on Original Message
             try:
                 ch = interaction.guild.get_channel(config.VAULT_CHANNEL_ID)
                 original_msg = await ch.fetch_message(config.vault_state["message_id"])
@@ -93,7 +75,6 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
                 await original_msg.edit(view=view)
             except: pass
 
-            # Public Announcement
             embed = discord.Embed(title=f"{config.EMOJI_PARTY_NEW} VAULT CRACKED! {config.EMOJI_PARTY_NEW}", color=0xFFD700)
             embed.description = (
                 f"{config.EMOJI_VAULT_WINNER_CROWN} **WINNER:** {interaction.user.mention}\n"
@@ -103,11 +84,8 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             )
             embed.set_footer(text="HELL SYSTEM • Vault Event")
             embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
-            
-            # Send public message and acknowledge interaction silently
             if interaction.channel: await interaction.channel.send(embed=embed)
-            await interaction.response.defer() # Just closes the modal without error
-            
+            await interaction.response.defer()
         else:
             await interaction.response.send_message(f"{config.EMOJI_VAULT_DENIED} **ACCESS DENIED.**", ephemeral=True)
 
@@ -120,10 +98,6 @@ class VaultView(discord.ui.View):
              return
         await interaction.response.send_modal(VaultModal())
 
-# ==========================================
-# ⚙️ MAIN COG
-# ==========================================
-
 class Systems(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -132,7 +106,6 @@ class Systems(commands.Cog):
     def cog_unload(self):
         self.backup_task.cancel()
 
-    # --- DB TASKS ---
     @tasks.loop(minutes=2)
     async def backup_task(self):
         await self.save_json("db_points.json", config.points_data)
@@ -169,7 +142,6 @@ class Systems(commands.Cog):
                             elif fname == "db_menus.json": config.menus_data = data
                         except: pass
                 
-                # Restart Giveaways
                 for msg_id, gdata in list(config.giveaways_data.items()):
                     self.bot.loop.create_task(self.run_giveaway_timer(
                         int(gdata["channel_id"]), int(msg_id), gdata["end_time"], gdata["prize"], gdata["winners"]
@@ -178,7 +150,6 @@ class Systems(commands.Cog):
         except Exception as e:
             print(f"[SYSTEMS ERROR] DB Load Failed: {e}")
 
-    # --- POINTS COMMANDS ---
     @app_commands.command(name="add_points", description="ADMIN: Add points to a user")
     async def add_points(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         if not interaction.user.guild_permissions.administrator: return
@@ -204,7 +175,6 @@ class Systems(commands.Cog):
             await msg.delete()
         except: pass
 
-    # --- VAULT ---
     @app_commands.command(name="event_vault", description="Start a Vault event")
     async def event_vault(self, interaction: discord.Interaction, code: str, prize: str):
         if not interaction.user.guild_permissions.administrator: return
@@ -237,7 +207,6 @@ class Systems(commands.Cog):
             await message.edit(embed=embed)
         except: pass
 
-    # --- GIVEAWAYS ---
     async def run_giveaway_timer(self, cid, mid, end_time, prize, winners):
         await asyncio.sleep(end_time - time.time())
         try:
@@ -278,9 +247,8 @@ class Systems(commands.Cog):
              return
         
         seconds = convert_time(time_str)
-        if seconds <= 0: return await interaction.response.send_message("❌ Invalid time format (e.g., 3d, 1h).", ephemeral=True)
+        if seconds <= 0: return await interaction.response.send_message("❌ Invalid time format.", ephemeral=True)
 
-        # Detect Sponsor Channel
         is_sponsor = (interaction.channel_id == config.GIVEAWAY_CHANNEL_ID)
         
         embed = discord.Embed(
@@ -289,13 +257,12 @@ class Systems(commands.Cog):
         )
         end_ts = int(time.time() + seconds)
         
-        # Add warning ONLY for Sponsor
-        warning_text = "\n⚠️ **ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick**" if is_sponsor else ""
+        warning_text = f"\n{config.EMOJI_WARN} **ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick**" if is_sponsor else ""
         
         embed.description = (
             f"{config.EMOJI_GIFT_NEW} **Prize:** {prize}\n"
             f"{config.EMOJI_CLOCK_NEW} **Ends:** <t:{end_ts}:R>\n"
-            f"👑 **Winners:** {winners}\n"
+            f"{config.EMOJI_VAULT_WINNER_CROWN} **Winners:** {winners}\n"
             f"{warning_text}\n"
             f"React with {config.EMOJI_PARTY_NEW} to enter!"
         )
@@ -313,7 +280,7 @@ class Systems(commands.Cog):
         }
         self.bot.loop.create_task(self.run_giveaway_timer(interaction.channel_id, msg.id, end_ts, prize, winners))
 
-    @app_commands.command(name="start_bulk_giveaway", description="Create multiple giveaways at once")
+    @app_commands.command(name="start_bulk_giveaway", description="Create multiple giveaways")
     async def start_bulk_giveaway(self, interaction: discord.Interaction, time_str: str, prizes_list: str, winners_per_giveaway: int = 1):
         if not interaction.user.guild_permissions.administrator: return
         seconds = convert_time(time_str)
@@ -324,7 +291,7 @@ class Systems(commands.Cog):
 
         is_sponsor = (interaction.channel_id == config.GIVEAWAY_CHANNEL_ID)
         end_ts = int(time.time() + seconds)
-        warning_text = "\n⚠️ **ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick**" if is_sponsor else ""
+        warning_text = f"\n{config.EMOJI_WARN} **ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick**" if is_sponsor else ""
 
         for prize in prizes:
             embed = discord.Embed(
@@ -334,7 +301,7 @@ class Systems(commands.Cog):
             embed.description = (
                 f"{config.EMOJI_GIFT_NEW} **Prize:** {prize}\n"
                 f"{config.EMOJI_CLOCK_NEW} **Ends:** <t:{end_ts}:R>\n"
-                f"👑 **Winners:** {winners_per_giveaway}\n"
+                f"{config.EMOJI_VAULT_WINNER_CROWN} **Winners:** {winners_per_giveaway}\n"
                 f"{warning_text}\n"
                 f"React with {config.EMOJI_PARTY_NEW} to enter!"
             )
@@ -352,7 +319,6 @@ class Systems(commands.Cog):
             self.bot.loop.create_task(self.run_giveaway_timer(interaction.channel_id, msg.id, end_ts, prize, winners_per_giveaway))
             await asyncio.sleep(1)
 
-    # --- POLLS ---
     @app_commands.command(name="finish_polls", description="Clean and publish poll results")
     async def finish_polls(self, interaction: discord.Interaction):
         try: await interaction.response.defer()
