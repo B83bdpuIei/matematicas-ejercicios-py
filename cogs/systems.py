@@ -7,10 +7,10 @@ import io
 import time
 import random
 import re
-import config  # Importamos tu configuración
+import config
 
 # ==========================================
-# 🛠️ FUNCIONES AUXILIARES (Globales del archivo)
+# 🛠️ HELPER FUNCTIONS
 # ==========================================
 
 def convert_time(time_str):
@@ -25,20 +25,24 @@ def convert_time(time_str):
 
 def parse_poll_result(content, winner_emoji):
     lines = content.split('\n')
-    question = "Pregunta desconocida"
-    answer = "Respuesta desconocida"
+    question = "Unknown Question"
+    answer = "Unknown Answer"
+    
     for line in lines:
+         # Detect line with arrow (ignoring emoji ID variations)
          if "hell_arrow" in line or line.strip().startswith(">"):
-             clean_q = line.replace(config.SERVER_EMOJIS["hell_arrow"], "").replace(">", "").replace("*", "").replace("_", "").strip()
-             # Limpieza extra por si acaso el ID cambió
-             if "<a:" in clean_q: clean_q = re.sub(r'<a?:[^:]+:[0-9]+>', '', clean_q).strip()
-             question = clean_q
+             # Clean all discord markdown and custom emojis
+             clean_q = re.sub(r'<a?:[^:]+:[0-9]+>', '', line) # Remove emojis
+             clean_q = clean_q.replace(">", "").replace("*", "").replace("_", "").strip()
+             if clean_q: question = clean_q
              break
+             
     s_emoji = str(winner_emoji)
     found = False
     for line in lines:
         if s_emoji in line:
             answer = line.replace(s_emoji, "").strip()
+            # Clean starting dash or colon
             if answer.startswith("-") or answer.startswith(":"): answer = answer[1:].strip()
             found = True
             break
@@ -58,9 +62,11 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
         
         # Check Cooldown
         if user_id in config.user_cooldowns:
-            if (current_time - config.user_cooldowns[user_id]) < 15:
-                await interaction.response.send_message(f"{config.EMOJI_VAULT_WAIT} Wait...", ephemeral=True)
+            remaining = 15 - (current_time - config.user_cooldowns[user_id])
+            if remaining > 0:
+                await interaction.response.send_message(f"{config.EMOJI_VAULT_WAIT} Wait **{int(remaining)}s**...", ephemeral=True)
                 return
+        
         config.user_cooldowns[user_id] = current_time
 
         if not config.vault_state["active"]:
@@ -71,22 +77,23 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             config.vault_state["active"] = False 
             if config.vault_state["hints_task"]: config.vault_state["hints_task"].cancel()
             
-            # Dar puntos
+            # Points
             uid = str(user_id)
             config.points_data[uid] = config.points_data.get(uid, 0) + 2000
             
-            # Bloquear botón original
+            # Disable Button on Original Message
             try:
                 ch = interaction.guild.get_channel(config.VAULT_CHANNEL_ID)
                 original_msg = await ch.fetch_message(config.vault_state["message_id"])
                 view = VaultView()
                 for child in view.children:
                     child.disabled = True
-                    child.label = "VAULT OPENED"
+                    child.label = "VAULT CRACKED"
                     child.style = discord.ButtonStyle.secondary
                 await original_msg.edit(view=view)
             except: pass
 
+            # Public Announcement
             embed = discord.Embed(title=f"{config.EMOJI_PARTY_NEW} VAULT CRACKED! {config.EMOJI_PARTY_NEW}", color=0xFFD700)
             embed.description = (
                 f"{config.EMOJI_VAULT_WINNER_CROWN} **WINNER:** {interaction.user.mention}\n"
@@ -96,7 +103,11 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             )
             embed.set_footer(text="HELL SYSTEM • Vault Event")
             embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
+            
+            # Send public message and acknowledge interaction silently
             if interaction.channel: await interaction.channel.send(embed=embed)
+            await interaction.response.defer() # Just closes the modal without error
+            
         else:
             await interaction.response.send_message(f"{config.EMOJI_VAULT_DENIED} **ACCESS DENIED.**", ephemeral=True)
 
@@ -110,7 +121,7 @@ class VaultView(discord.ui.View):
         await interaction.response.send_modal(VaultModal())
 
 # ==========================================
-# ⚙️ CLASE PRINCIPAL (COG)
+# ⚙️ MAIN COG
 # ==========================================
 
 class Systems(commands.Cog):
@@ -121,14 +132,11 @@ class Systems(commands.Cog):
     def cog_unload(self):
         self.backup_task.cancel()
 
-    # --- TAREAS DE BASE DE DATOS ---
+    # --- DB TASKS ---
     @tasks.loop(minutes=2)
     async def backup_task(self):
-        # Guardar Puntos
         await self.save_json("db_points.json", config.points_data)
-        # Guardar Giveaways
         await self.save_json("db_giveaways.json", config.giveaways_data)
-        # Guardar Embeds, Autosend y Menus (que usaremos en el otro archivo)
         await self.save_json("db_embeds.json", config.embeds_data)
         await self.save_json("db_autosend.json", config.autosend_data)
         await self.save_json("db_menus.json", config.menus_data)
@@ -140,22 +148,15 @@ class Systems(commands.Cog):
                 json_str = json.dumps(data, indent=None)
                 file_obj = discord.File(io.StringIO(json_str), filename=filename)
                 await channel.send(f"Backup {filename}: {int(time.time())}", file=file_obj)
-                # Limpiar mensajes viejos del bot
-                try:
-                    async for msg in channel.history(limit=10):
-                        if msg.author == self.bot.user and (time.time() - msg.created_at.timestamp()) > 600:
-                            await msg.delete()
-                except: pass
         except: pass
 
     @backup_task.before_loop
     async def before_backup(self):
         await self.bot.wait_until_ready()
-        # CARGAR DATOS AL INICIO
         try:
             channel = self.bot.get_channel(config.DB_CHANNEL_ID)
             if channel:
-                print("[SYSTEMS] Cargando base de datos...")
+                print("[SYSTEMS] Loading Database...")
                 async for msg in channel.history(limit=50):
                     if msg.author == self.bot.user and msg.attachments:
                         fname = msg.attachments[0].filename
@@ -168,30 +169,30 @@ class Systems(commands.Cog):
                             elif fname == "db_menus.json": config.menus_data = data
                         except: pass
                 
-                # Reactivar Giveaways
+                # Restart Giveaways
                 for msg_id, gdata in list(config.giveaways_data.items()):
                     self.bot.loop.create_task(self.run_giveaway_timer(
                         int(gdata["channel_id"]), int(msg_id), gdata["end_time"], gdata["prize"], gdata["winners"]
                     ))
-                print("[SYSTEMS] Carga completada.")
+                print("[SYSTEMS] Database Loaded.")
         except Exception as e:
-            print(f"[SYSTEMS ERROR] Fallo al cargar DB: {e}")
+            print(f"[SYSTEMS ERROR] DB Load Failed: {e}")
 
-    # --- COMANDOS DE PUNTOS ---
-    @app_commands.command(name="add_points", description="ADMIN: Añadir puntos")
-    async def add_points(self, interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
+    # --- POINTS COMMANDS ---
+    @app_commands.command(name="add_points", description="ADMIN: Add points to a user")
+    async def add_points(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         if not interaction.user.guild_permissions.administrator: return
-        uid = str(usuario.id)
-        config.points_data[uid] = config.points_data.get(uid, 0) + cantidad
-        await interaction.response.send_message(f"✅ {usuario.mention} +{cantidad} (Total: {config.points_data[uid]})")
+        uid = str(user.id)
+        config.points_data[uid] = config.points_data.get(uid, 0) + amount
+        await interaction.response.send_message(f"✅ {user.mention} +{amount} (Total: {config.points_data[uid]})")
 
-    @app_commands.command(name="remove_points", description="ADMIN: Quitar puntos")
-    async def remove_points(self, interaction: discord.Interaction, usuario: discord.Member, cantidad: int):
+    @app_commands.command(name="remove_points", description="ADMIN: Remove points from a user")
+    async def remove_points(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         if not interaction.user.guild_permissions.administrator: return
-        uid = str(usuario.id)
+        uid = str(user.id)
         current = config.points_data.get(uid, 0)
-        config.points_data[uid] = max(0, current - cantidad)
-        await interaction.response.send_message(f"✅ {usuario.mention} -{cantidad}")
+        config.points_data[uid] = max(0, current - amount)
+        await interaction.response.send_message(f"✅ {user.mention} -{amount}")
 
     @commands.command(name="points")
     async def check_points(self, ctx):
@@ -203,8 +204,8 @@ class Systems(commands.Cog):
             await msg.delete()
         except: pass
 
-    # --- VAULT SYSTEM ---
-    @app_commands.command(name="event_vault")
+    # --- VAULT ---
+    @app_commands.command(name="event_vault", description="Start a Vault event")
     async def event_vault(self, interaction: discord.Interaction, code: str, prize: str):
         if not interaction.user.guild_permissions.administrator: return
         ch = self.bot.get_channel(config.VAULT_CHANNEL_ID)
@@ -220,23 +221,23 @@ class Systems(commands.Cog):
         if config.vault_state["hints_task"]: config.vault_state["hints_task"].cancel()
         config.vault_state["hints_task"] = asyncio.create_task(self.manage_vault_hints(ch, msg, code))
         
-        await interaction.followup.send("✅ Vault iniciada.")
+        await interaction.followup.send("✅ Vault Started.")
 
     async def manage_vault_hints(self, channel, message, code):
         try:
-            await asyncio.sleep(18000) # 5 horas
+            await asyncio.sleep(18000) 
             if not config.vault_state["active"]: return
             embed = message.embeds[0]
             embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{code[:2]}##`", inline=True)
             await message.edit(embed=embed)
             
-            await asyncio.sleep(68400) # 24 horas
+            await asyncio.sleep(68400) 
             if not config.vault_state["active"]: return
             embed.set_field_at(0, name="📡 LEAKED DATA", value=f"`{code[:3]}#`", inline=True)
             await message.edit(embed=embed)
         except: pass
 
-    # --- GIVEAWAY SYSTEM ---
+    # --- GIVEAWAYS ---
     async def run_giveaway_timer(self, cid, mid, end_time, prize, winners):
         await asyncio.sleep(end_time - time.time())
         try:
@@ -268,25 +269,34 @@ class Systems(commands.Cog):
 
             if str(mid) in config.giveaways_data:
                 del config.giveaways_data[str(mid)]
-                # No guardamos aquí para no spammear la DB, se guarda en el loop
         except: pass
 
-    @app_commands.command(name="start_giveaway")
+    @app_commands.command(name="start_giveaway", description="Start a single giveaway")
     async def start_giveaway(self, interaction: discord.Interaction, time_str: str, prize: str, winners: int = 1):
-        if not interaction.user.guild_permissions.administrator: return
+        if not interaction.user.guild_permissions.administrator:
+             await interaction.response.send_message("❌ No permissions.", ephemeral=True)
+             return
+        
         seconds = convert_time(time_str)
-        if seconds <= 0: return await interaction.response.send_message("❌ Tiempo inválido.", ephemeral=True)
+        if seconds <= 0: return await interaction.response.send_message("❌ Invalid time format (e.g., 3d, 1h).", ephemeral=True)
 
+        # Detect Sponsor Channel
         is_sponsor = (interaction.channel_id == config.GIVEAWAY_CHANNEL_ID)
+        
         embed = discord.Embed(
             title=f"{config.EMOJI_FIRE_ANIM} HELL SPONSOR GIVEAWAY {config.EMOJI_FIRE_ANIM}" if is_sponsor else f"{config.EMOJI_PARTY_NEW} GIVEAWAY",
             color=0x990000 if is_sponsor else 0x00FF00
         )
         end_ts = int(time.time() + seconds)
+        
+        # Add warning ONLY for Sponsor
+        warning_text = "\n⚠️ **ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick**" if is_sponsor else ""
+        
         embed.description = (
             f"{config.EMOJI_GIFT_NEW} **Prize:** {prize}\n"
             f"{config.EMOJI_CLOCK_NEW} **Ends:** <t:{end_ts}:R>\n"
-            f"👑 **Winners:** {winners}\n\n"
+            f"👑 **Winners:** {winners}\n"
+            f"{warning_text}\n"
             f"React with {config.EMOJI_PARTY_NEW} to enter!"
         )
         embed.set_footer(text="Hell System • Giveaway")
@@ -303,17 +313,18 @@ class Systems(commands.Cog):
         }
         self.bot.loop.create_task(self.run_giveaway_timer(interaction.channel_id, msg.id, end_ts, prize, winners))
 
-    @app_commands.command(name="start_bulk_giveaway", description="Crea múltiples sorteos a la vez.")
+    @app_commands.command(name="start_bulk_giveaway", description="Create multiple giveaways at once")
     async def start_bulk_giveaway(self, interaction: discord.Interaction, time_str: str, prizes_list: str, winners_per_giveaway: int = 1):
         if not interaction.user.guild_permissions.administrator: return
         seconds = convert_time(time_str)
-        if seconds <= 0: return await interaction.response.send_message("❌ Tiempo inválido.", ephemeral=True)
+        if seconds <= 0: return await interaction.response.send_message("❌ Invalid time.", ephemeral=True)
 
         prizes = [p.strip() for p in prizes_list.split(',')]
-        await interaction.response.send_message(f"✅ Creando **{len(prizes)}** sorteos...", ephemeral=True)
+        await interaction.response.send_message(f"✅ Creating **{len(prizes)}** giveaways...", ephemeral=True)
 
         is_sponsor = (interaction.channel_id == config.GIVEAWAY_CHANNEL_ID)
         end_ts = int(time.time() + seconds)
+        warning_text = "\n⚠️ **ANTI-CHEAT ACTIVE: Remove name tag = Auto-Kick**" if is_sponsor else ""
 
         for prize in prizes:
             embed = discord.Embed(
@@ -323,7 +334,8 @@ class Systems(commands.Cog):
             embed.description = (
                 f"{config.EMOJI_GIFT_NEW} **Prize:** {prize}\n"
                 f"{config.EMOJI_CLOCK_NEW} **Ends:** <t:{end_ts}:R>\n"
-                f"👑 **Winners:** {winners_per_giveaway}\n\n"
+                f"👑 **Winners:** {winners_per_giveaway}\n"
+                f"{warning_text}\n"
                 f"React with {config.EMOJI_PARTY_NEW} to enter!"
             )
             embed.set_footer(text="Hell System • Giveaway")
@@ -340,8 +352,8 @@ class Systems(commands.Cog):
             self.bot.loop.create_task(self.run_giveaway_timer(interaction.channel_id, msg.id, end_ts, prize, winners_per_giveaway))
             await asyncio.sleep(1)
 
-    # --- POLLS SYSTEM ---
-    @app_commands.command(name="finish_polls")
+    # --- POLLS ---
+    @app_commands.command(name="finish_polls", description="Clean and publish poll results")
     async def finish_polls(self, interaction: discord.Interaction):
         try: await interaction.response.defer()
         except: return 
@@ -371,7 +383,7 @@ class Systems(commands.Cog):
                 results_list.append(line)
 
         if not results_list:
-            await interaction.followup.send(f"⚠️ No encontré encuestas válidas para {target_date}.", ephemeral=True)
+            await interaction.followup.send(f"⚠️ No polls found for {target_date}.", ephemeral=True)
             return
 
         results_list.reverse()
