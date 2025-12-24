@@ -14,7 +14,7 @@ import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
-# 🚑 FAKE WEB SERVER (Mantiene el bot 24/7)
+# 🚑 FAKE WEB SERVER
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -53,10 +53,9 @@ DB_CHANNEL_ID = 1451330350436323348
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
 # ==========================================
-# 🖼️ EMOJIS & DATA (BASE DE DATOS COMPLETA)
+# 🖼️ EMOJIS & DATA
 # ==========================================
 SERVER_EMOJIS = {
-    # EMOJIS ANIMADOS (IMPORTANTE: LA 'a' AL PRINCIPIO)
     "emoji_9": "<a:emoji_9:868224374333919333>",
     "emoji_48": "<a:emoji_48:926958427404648488>",
     "Good_2": "<a:Good_2:930098652804952074>",
@@ -97,8 +96,6 @@ SERVER_EMOJIS = {
     "greenarrow": "<a:greenarrow:1450625398051311667>",
     "Pokecoin": "<:Pokecoin:1450625492309901495>", 
     "C4_HELL": "<:C4_HELL:1451357075321131049>",   
-
-    # RESTO
     "Money": "<:Money:932019879287087164>",
     "Paypal": "<:Paypal:1096357712289345566>",
     "Emoji": "<:Emoji:1137005608697086092>",
@@ -150,7 +147,6 @@ EMOJI_VAULT_CODE_ICON = SERVER_EMOJIS["emoji_69"]
 EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]
 EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 
-# 🔥 EMOJIS MODAL VAULT NUEVOS 🔥
 EMOJI_VAULT_WAIT = SERVER_EMOJIS["Red_Clock"]
 EMOJI_VAULT_DENIED = SERVER_EMOJIS["warn"]
 
@@ -206,7 +202,6 @@ async def save_giveaways_db():
 
 async def backup_points_task():
     await bot.wait_until_ready()
-    # 1. LOAD POINTS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -220,7 +215,6 @@ async def backup_points_task():
                         break
     except: pass
 
-    # 2. LOAD GIVEAWAYS
     try:
         channel = bot.get_channel(DB_CHANNEL_ID)
         if channel:
@@ -247,7 +241,6 @@ async def backup_points_task():
     except Exception as e: 
         print(f"[DB ERROR] Giveaways load failed: {e}")
 
-    # Loop de guardado de puntos
     while not bot.is_closed():
         await asyncio.sleep(120) 
         try:
@@ -276,41 +269,34 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ==========================================
-# 🧩 HELPER FUNCTIONS (CORREGIDO PARSE POLL)
+# 🧩 HELPER FUNCTIONS
 # ==========================================
 def parse_poll_result(content, winner_emoji):
     lines = content.split('\n')
     question = "Pregunta desconocida"
     answer = "Respuesta desconocida"
-    
     for line in lines:
-         # Buscamos la línea que tiene la flecha o empieza por >
          if "hell_arrow" in line or line.strip().startswith(">"):
-             # Limpiamos todos los adornos sucios
              clean_q = line.replace("<a:hell_arrow:1334124040960610336>", "") 
              clean_q = clean_q.replace("<a:hell_arrow:1211049707128750080>", "") 
              clean_q = clean_q.replace(">", "")
-             clean_q = clean_q.replace("*", "") # Quitamos negritas viejas
-             clean_q = clean_q.replace("_", "") # Quitamos subrayados viejos
+             clean_q = clean_q.replace("*", "")
+             clean_q = clean_q.replace("_", "")
              clean_q = clean_q.strip()
              question = clean_q
              break
-             
     s_emoji = str(winner_emoji)
     found = False
     for line in lines:
         if s_emoji in line:
             answer = line.replace(s_emoji, "").strip()
-            # Quitamos guiones o decoraciones extra
             if answer.startswith("-") or answer.startswith(":"):
                 answer = answer[1:].strip()
             found = True
             break
-            
     if not found: answer = s_emoji 
     return question, answer
 
-# 🔥 NUEVO CONVERTIDOR DE TIEMPO FLEXIBLE
 def convert_time(time_str):
     time_regex = re.compile(r"(\d+)([smhd])")
     matches = time_regex.findall(time_str.lower().replace(" ", ""))
@@ -325,7 +311,6 @@ async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_co
     remaining = end_time - time.time()
     if remaining > 0:
         await asyncio.sleep(remaining)
-    
     try:
         channel = bot.get_channel(channel_id)
         if not channel: return
@@ -346,7 +331,6 @@ async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_co
     if len(users) > 0:
         winner_list = random.sample(users, k=min(len(users), winners_count))
         winners_text = ", ".join([w.mention for w in winner_list])
-        
         embed = msg.embeds[0]
         embed.color = discord.Color.greyple()
         embed.description = (
@@ -364,30 +348,25 @@ async def run_giveaway_timer(channel_id, message_id, end_time, prize, winners_co
         await save_giveaways_db()
 
 # ==========================================
-# 🦖 MINIGAME: WHO IS THE DINO
+# 🦖 MINIGAME & VAULT
 # ==========================================
-
 class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
     answer_input = discord.ui.TextInput(label="Dino Name", placeholder="Enter name...", required=True)
-
     def __init__(self, correct_answer):
         super().__init__()
         self.correct_answer = correct_answer
         self.view_ref = None
-
     async def on_submit(self, interaction: discord.Interaction):
         guess = self.answer_input.value.strip().lower()
         if self.view_ref and self.view_ref.grabbed:
              await interaction.response.send_message("❌ Someone was faster.", ephemeral=True)
              return
-
         if guess == self.correct_answer.lower():
             if self.view_ref: self.view_ref.grabbed = True 
             points_won = 200 
             add_points_to_user(interaction.user.id, points_won)
             try: await interaction.response.send_message(f"{EMOJI_CORRECT} **CORRECT!** You guessed it.", ephemeral=True)
             except: pass
-
             embed = discord.Embed(color=0x00FF00)
             embed.description = (
                 f"{EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
@@ -396,7 +375,6 @@ class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
             )
             embed.set_footer(text="Hell System • Dino Games")
             if interaction.channel: await interaction.channel.send(embed=embed)
-            
             try:
                 view = self.view_ref 
                 for child in view.children: child.disabled = True
@@ -411,7 +389,6 @@ class DinoView(discord.ui.View):
         super().__init__(timeout=None)
         self.correct_dino = correct_dino
         self.grabbed = False 
-
     @discord.ui.button(label="GUESS THE DINO", style=discord.ButtonStyle.primary, emoji="❓", custom_id="dino_guess_btn_v2")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.grabbed:
@@ -427,11 +404,9 @@ async def dino_game_loop():
     try:
         channel = bot.get_channel(DINO_CHANNEL_ID)
         if not channel: return
-        
         if last_dino_message:
             try: await last_dino_message.edit(view=None)
             except: pass
-
         dino_real_name = random.choice(ARK_DINOS)
         char_list = list(dino_real_name.upper())
         random.shuffle(char_list)
@@ -439,7 +414,6 @@ async def dino_game_loop():
         while scrambled_name == dino_real_name.upper():
             random.shuffle(char_list)
             scrambled_name = "".join(char_list)
-
         embed = discord.Embed(title=f"{EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
         embed.description = (
             f"Unscramble the name of this creature!\n\n"
@@ -452,14 +426,9 @@ async def dino_game_loop():
     except Exception as e:
         print(f"Error in Dino Loop: {e}")
 
-# 🔥 ARREGLO DE LOOP (Espera a que el bot este listo)
 @dino_game_loop.before_loop
 async def before_dino_game_loop():
     await bot.wait_until_ready()
-
-# ==========================================
-# 🎮 MINIGAMES CLASSES
-# ==========================================
 
 class ArkDropView(discord.ui.View):
     def __init__(self): 
@@ -622,10 +591,6 @@ class PokemonVisualView(discord.ui.View):
     @discord.ui.button(label="Grass 🌿", style=discord.ButtonStyle.success, custom_id="pk_gra")
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Grass")
 
-# ==========================================
-# 🔄 AUTOMATIC SYSTEM
-# ==========================================
-
 async def spawn_game(channel):
     game_type = random.randint(1, 6)
     view = None
@@ -673,28 +638,21 @@ async def spawn_game(channel):
 
 @tasks.loop(minutes=5)
 async def minigames_auto_loop():
-    if not bot.is_ready(): return
     global last_minigame_message
     try:
         channel = bot.get_channel(MINIGAMES_CHANNEL_ID)
         if not channel: return
-        
         if last_minigame_message:
             try: await last_minigame_message.edit(view=None)
             except: pass 
-        
         last_minigame_message = await spawn_game(channel)
     except Exception as e:
         print(f"Error Minigame Loop: {e}")
 
-# 🔥 ARREGLO DE LOOP (Espera a que el bot este listo)
 @minigames_auto_loop.before_loop
 async def before_minigames_loop():
     await bot.wait_until_ready()
 
-# ==========================================
-# 🏦 VAULT SYSTEM
-# ==========================================
 class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
     code_input = discord.ui.TextInput(label="INSERT PIN CODE", placeholder="####", min_length=4, max_length=4, required=True)
     async def on_submit(self, interaction: discord.Interaction):
@@ -702,7 +660,6 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
         current_time = time.time()
         if user_id in user_cooldowns:
             if (time.time() - user_cooldowns[user_id]) < 15:
-                # 🔥 EMOJI RED CLOCK
                 await interaction.response.send_message(f"{EMOJI_VAULT_WAIT} Wait...", ephemeral=True)
                 return
         user_cooldowns[user_id] = current_time
@@ -714,12 +671,10 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             if vault_state["hints_task"]: vault_state["hints_task"].cancel()
             add_points_to_user(interaction.user.id, 2000)
             
-            # 🔥 BLOQUEAR BOTÓN ORIGINAL 🔥
             try:
                 ch = interaction.guild.get_channel(VAULT_CHANNEL_ID)
                 original_msg = await ch.fetch_message(vault_state["message_id"])
                 
-                # Crear vista con botón deshabilitado
                 view = VaultView()
                 for child in view.children:
                     child.disabled = True
@@ -739,10 +694,7 @@ class VaultModal(discord.ui.Modal, title="🔐 SECURITY OVERRIDE"):
             embed.set_footer(text="HELL SYSTEM • Vault Event")
             embed.set_image(url="https://media1.tenor.com/m/X9kF3Qv1mJAAAAAC/open-safe.gif")
             if interaction.channel: await interaction.channel.send(embed=embed)
-            
-            # AQUI YA NO MANDAMOS NADA EFIMERO, SOLO EL WINNER PUBLICO
         else:
-            # 🔥 EMOJI WARN
             await interaction.response.send_message(f"{EMOJI_VAULT_DENIED} **ACCESS DENIED.**", ephemeral=True)
 
 class VaultView(discord.ui.View):
@@ -767,9 +719,6 @@ async def manage_vault_hints(channel, message, code):
         await message.edit(embed=embed)
     except: pass
 
-# ==========================================
-# 🔘 ROLES
-# ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
         super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
@@ -908,6 +857,63 @@ async def start_giveaway(interaction: discord.Interaction, time_str: str, prize:
         winners
     ))
 
+# 🔥 NUEVO COMANDO: MULTI-GIVEAWAY (BULK) 🔥
+@bot.tree.command(name="start_bulk_giveaway", description="Crea múltiples sorteos a la vez.")
+async def start_bulk_giveaway(interaction: discord.Interaction, time_str: str, prizes_list: str, winners_per_giveaway: int = 1):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ No tienes permisos.", ephemeral=True)
+        return
+
+    seconds = convert_time(time_str)
+    if seconds < 0:
+        await interaction.response.send_message("❌ Tiempo inválido.", ephemeral=True)
+        return
+
+    prizes = [p.strip() for p in prizes_list.split(',')]
+    if not prizes:
+        await interaction.response.send_message("❌ Debes poner al menos un premio.", ephemeral=True)
+        return
+
+    await interaction.response.send_message(f"✅ Creando **{len(prizes)}** sorteos...", ephemeral=True)
+
+    is_sponsor_channel = (interaction.channel_id == GIVEAWAY_CHANNEL_ID)
+    embed_color = 0x990000 if is_sponsor_channel else 0x00FF00
+    embed_title = f"{EMOJI_FIRE_ANIM} HELL SPONSOR GIVEAWAY {EMOJI_FIRE_ANIM}" if is_sponsor_channel else f"{EMOJI_PARTY_NEW} GIVEAWAY"
+    footer_text = "⚠️ ANTI-CHEAT ACTIVE" if is_sponsor_channel else "Hell System • Giveaway"
+    end_timestamp = int(time.time() + seconds)
+
+    for prize in prizes:
+        embed = discord.Embed(title=embed_title, color=embed_color)
+        embed.description = (
+            f"{EMOJI_GIFT_NEW} **Prize:** {prize}\n"
+            f"{EMOJI_CLOCK_NEW} **Ends:** <t:{end_timestamp}:R>\n" 
+            f"👑 **Winners:** {winners_per_giveaway}\n\n"
+            f"React with {EMOJI_PARTY_NEW} to enter!"
+        )
+        embed.set_footer(text=footer_text)
+        
+        msg = await interaction.channel.send(embed=embed)
+        await msg.add_reaction(EMOJI_PARTY_NEW)
+
+        giveaways_data[str(msg.id)] = {
+            "channel_id": interaction.channel_id,
+            "end_time": end_timestamp,
+            "prize": prize,
+            "winners": winners_per_giveaway
+        }
+        
+        bot.loop.create_task(run_giveaway_timer(
+            interaction.channel_id, 
+            msg.id, 
+            end_timestamp, 
+            prize, 
+            winners_per_giveaway
+        ))
+        
+        await asyncio.sleep(1) # Pequeña pausa para no saturar
+
+    await save_giveaways_db()
+
 @bot.tree.command(name="finish_polls", description="Publica resultados SOLO del día de la última encuesta.")
 async def finish_polls(interaction: discord.Interaction):
     try:
@@ -924,7 +930,6 @@ async def finish_polls(interaction: discord.Interaction):
         await interaction.followup.send(f"❌ Canal {POLLS_CHANNEL_ID} no encontrado.", ephemeral=True)
         return
 
-    # 1. Obtener la fecha de referencia del ÚLTIMO mensaje del canal
     target_date = None
     async for last_msg in polls_channel.history(limit=1):
         target_date = last_msg.created_at.date()
@@ -934,28 +939,20 @@ async def finish_polls(interaction: discord.Interaction):
         return
 
     results_list = []
-    
-    # 2. Buscar solo mensajes que coincidan con esa fecha
-    # Limitamos a 50 para no saturar, pero pararemos antes si cambia la fecha
     async for message in polls_channel.history(limit=50):
-        # Si el mensaje es de un día diferente al último, PARAMOS de buscar
         if message.created_at.date() != target_date:
             break 
 
         if not message.content or not message.reactions: continue 
-        # Filtro para ignorar mensajes de separacion "----"
         if "----" in message.content and len(message.content) < 30: continue
 
-        # Buscar ganador
         try:
             winner_reaction = max(message.reactions, key=lambda r: r.count)
         except:
-            continue # Si no hay reacciones, saltamos
+            continue
 
-        # Solo si tiene votos (count > 1 porque el bot cuenta como 1 a veces)
         if winner_reaction.count >= 1: 
             question, answer_text = parse_poll_result(message.content, winner_reaction.emoji)
-            # Formato FINAL: Flecha + Negrita (sin subrayar) + Respuesta
             line = f"{HELL_ARROW} **{question}** : {answer_text}"
             results_list.append(line)
 
@@ -963,22 +960,16 @@ async def finish_polls(interaction: discord.Interaction):
         await interaction.followup.send(f"⚠️ No encontré encuestas válidas para la fecha {target_date}.", ephemeral=True)
         return
 
-    # 3. Invertir la lista para que salga de la primera a la última
     results_list.reverse()
-    
     full_content = "\n".join(results_list)
-    
-    # Cabecera
     header = f"📢 **POLL RESULTS**\n📅 {target_date}\n\n"
     final_text = header + full_content
 
-    # 4. Enviar (Gestión de límite de 4096 caracteres)
     if len(final_text) <= 4000:
         embed = discord.Embed(description=final_text, color=0x990000)
         embed.set_footer(text="Hell System polls")
         await interaction.followup.send(embed=embed)
     else:
-        # Si es MUY largo, cortamos (aunque al filtrar por día es raro que pase)
         chunks = [final_text[i:i+4000] for i in range(0, len(final_text), 4000)]
         for i, chunk in enumerate(chunks):
             embed = discord.Embed(description=chunk, color=0x990000)
@@ -988,23 +979,12 @@ async def finish_polls(interaction: discord.Interaction):
                 embed.set_footer(text=f"Hell System polls (Parte {i+1})")
             await interaction.followup.send(embed=embed)
 
-# ==========================================
-# 🛡️ EVENTS
-# ==========================================
 @bot.event
 async def on_ready():
     print(f"🔥 HELL SYSTEM ONLINE: {bot.user}")
     try: await bot.tree.sync()
     except: pass
     
-    # 🔴 HERRAMIENTA DE EMOJIS (SOLO IMPRIME EN CONSOLA)
-    print("\n--- LISTA DE EMOJIS DEL SERVIDOR ---")
-    for guild in bot.guilds:
-        print(f"Servidor: {guild.name}")
-        for emoji in guild.emojis:
-            print(f"Nombre: {emoji.name} | ID: {emoji.id} | Código: <:{emoji.name}:{emoji.id}>")
-    print("------------------------------------\n")
-
     bot.loop.create_task(backup_points_task())
     if not dino_game_loop.is_running(): dino_game_loop.start()
     if not minigames_auto_loop.is_running(): minigames_auto_loop.start()
