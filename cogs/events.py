@@ -9,11 +9,13 @@ import config
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
-        # IMPORTANT: custom_id must be persistent
-        super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_btn_{role_id}")
+        # El custom_id ES CLAVE. Tiene que ser fijo para que funcione en mensajes viejos.
+        # Estamos usando "role_ID" como identificador único.
+        super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
         self.role_id = role_id
 
     async def callback(self, interaction: discord.Interaction):
+        # Este callback se dispara cuando alguien pulsa el botón
         role = interaction.guild.get_role(self.role_id)
         if role:
             if role in interaction.user.roles:
@@ -23,11 +25,11 @@ class RoleButton(discord.ui.Button):
                 await interaction.user.add_roles(role)
                 await interaction.response.send_message(f"➕ Added {role.name}", ephemeral=True)
         else:
-            await interaction.response.send_message("❌ Role config error. Check ID.", ephemeral=True)
+            await interaction.response.send_message("❌ Role config error. Check IDs in config.py", ephemeral=True)
 
 class RolesView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None) # Persistent
+        super().__init__(timeout=None) # timeout=None HACE QUE SEA ETERNO
         for label, role_id in config.ROLES_CONFIG.items():
             self.add_item(RoleButton(label, role_id))
 
@@ -43,7 +45,9 @@ class Events(commands.Cog):
     def cog_unload(self):
         self.support_role_task.cancel()
 
-    # --- SETUP ROLES COMMAND (NEW) ---
+    # --- SETUP ROLES COMMAND ---
+    # Úsalo UNA VEZ para generar el mensaje si lo borraste. 
+    # Si ya tienes el mensaje viejo, los botones deberían revivir solos al reiniciar el bot.
     @app_commands.command(name="setup_roles", description="Send the Auto-Role panel")
     async def setup_roles(self, interaction: discord.Interaction):
         if not interaction.user.guild_permissions.administrator: return
@@ -81,9 +85,10 @@ class Events(commands.Cog):
     # --- ON READY (FIX PERSISTENCE) ---
     @commands.Cog.listener()
     async def on_ready(self):
-        # Register the View so buttons work after restart
+        # ESTO ES LO QUE HACE QUE LOS BOTONES VIEJOS FUNCIONEN
+        # El bot "re-escucha" los botones cada vez que se enciende.
         self.bot.add_view(RolesView())
-        print("[EVENTS] Roles View Registered.")
+        print("[EVENTS] Roles View Registered (Buttons active).")
 
         # Check Shop Channel
         for guild in self.bot.guilds:
@@ -104,7 +109,27 @@ class Events(commands.Cog):
                     embed.set_footer(text="Hell System • Economy")
                     await shop_channel.send(embed=embed)
 
-    # --- MEMBER UPDATE (INSTANT SUPPORT ROLE) ---
+        # Check Commands Channel
+        c_ch = self.bot.get_channel(config.CMD_CHANNEL_ID)
+        if c_ch:
+            async for m in c_ch.history(limit=10):
+                if m.author == self.bot.user:
+                    if m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""): pass 
+                    else: await m.delete()
+            
+            menu_exists = False
+            async for m in c_ch.history(limit=10):
+                 if m.author == self.bot.user and m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
+                     menu_exists = True
+                     break
+            
+            if not menu_exists:
+                embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
+                embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{config.HELL_ARROW} **!recipes**\n{config.HELL_ARROW} **!points**\n{config.HELL_ARROW} **.suggest <text>**\n{config.HELL_ARROW} **/whitelistme**", inline=False)
+                embed.set_footer(text="HELL SYSTEM • Commands")
+                await c_ch.send(embed=embed)
+
+    # --- MEMBER UPDATE ---
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         name_check = after.global_name if after.global_name else after.name
@@ -120,7 +145,6 @@ class Events(commands.Cog):
             if role in after.roles:
                 try: await after.remove_roles(role)
                 except: pass
-                # Remove from giveaways if checks are strict
                 try:
                     ga_channel = after.guild.get_channel(config.GIVEAWAY_CHANNEL_ID)
                     if ga_channel:
