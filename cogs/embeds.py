@@ -273,8 +273,12 @@ class Embeds(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def autosend_loop(self):
-        now = datetime.datetime.now().strftime("%H:%M")
-        # Copia de seguridad de la lista para iterar sin errores
+        # 🔥 FIX TIMEZONE: Sumamos 1 hora para España
+        now = (datetime.datetime.now() + datetime.timedelta(hours=1)).strftime("%H:%M")
+        
+        # Log para depuración (borrar cuando funcione)
+        print(f"[AUTOSEND] Checking tasks for {now}...") 
+        
         for uid, data in list(config.autosend_data.items()):
             if data["time"] == now:
                 try:
