@@ -9,13 +9,11 @@ import config
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
-        # El custom_id ES CLAVE. Tiene que ser fijo para que funcione en mensajes viejos.
-        # Estamos usando "role_ID" como identificador único.
+        # ID Personalizada para persistencia
         super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
         self.role_id = role_id
 
     async def callback(self, interaction: discord.Interaction):
-        # Este callback se dispara cuando alguien pulsa el botón
         role = interaction.guild.get_role(self.role_id)
         if role:
             if role in interaction.user.roles:
@@ -29,7 +27,7 @@ class RoleButton(discord.ui.Button):
 
 class RolesView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None) # timeout=None HACE QUE SEA ETERNO
+        super().__init__(timeout=None) # Persistente
         for label, role_id in config.ROLES_CONFIG.items():
             self.add_item(RoleButton(label, role_id))
 
@@ -44,17 +42,6 @@ class Events(commands.Cog):
 
     def cog_unload(self):
         self.support_role_task.cancel()
-
-    # --- SETUP ROLES COMMAND ---
-    # Úsalo UNA VEZ para generar el mensaje si lo borraste. 
-    # Si ya tienes el mensaje viejo, los botones deberían revivir solos al reiniciar el bot.
-    @app_commands.command(name="setup_roles", description="Send the Auto-Role panel")
-    async def setup_roles(self, interaction: discord.Interaction):
-        if not interaction.user.guild_permissions.administrator: return
-        embed = discord.Embed(title="🔔 **NOTIFICATIONS & ACCESS**", description="> Click buttons below to toggle roles.\n> Select channels you want to see.\n-----------------------------", color=0x990000)
-        embed.set_footer(text="Hell Legion System • Auto-Roles")
-        await interaction.channel.send(embed=embed, view=RolesView())
-        await interaction.response.send_message("✅ Panel Sent", ephemeral=True)
 
     # --- SUPPORT ROLE TASK ---
     @tasks.loop(minutes=1)
@@ -82,15 +69,33 @@ class Events(commands.Cog):
     async def before_support(self):
         await self.bot.wait_until_ready()
 
-    # --- ON READY (FIX PERSISTENCE) ---
+    # --- ON READY (AUTO-SEND & PERSISTENCE) ---
     @commands.Cog.listener()
     async def on_ready(self):
-        # ESTO ES LO QUE HACE QUE LOS BOTONES VIEJOS FUNCIONEN
-        # El bot "re-escucha" los botones cada vez que se enciende.
+        # 1. Registrar la vista para que los botones funcionen siempre
         self.bot.add_view(RolesView())
-        print("[EVENTS] Roles View Registered (Buttons active).")
+        print("[EVENTS] Roles View Registered.")
 
-        # Check Shop Channel
+        # 2. AUTO-ENVÍO DEL PANEL DE ROLES
+        roles_channel = self.bot.get_channel(config.ROLES_CHANNEL_ID) # ID: 1449083960578670614
+        if roles_channel:
+            msg_exists = False
+            # Buscar si ya enviamos el panel antes
+            async for m in roles_channel.history(limit=20):
+                if m.author == self.bot.user and m.embeds:
+                    if "NOTIFICATIONS & ACCESS" in (m.embeds[0].title or ""):
+                        msg_exists = True
+                        break
+            
+            # Si no existe, lo enviamos
+            if not msg_exists:
+                await roles_channel.purge(limit=5) # Limpieza opcional antes de enviar
+                embed = discord.Embed(title="🔔 **NOTIFICATIONS & ACCESS**", description="> Click buttons below to toggle roles.\n> Select channels you want to see.\n-----------------------------", color=0x990000)
+                embed.set_footer(text="Hell Legion System • Auto-Roles")
+                await roles_channel.send(embed=embed, view=RolesView())
+                print("[EVENTS] Roles Panel Sent.")
+
+        # 3. Check Shop Channel (Misma lógica, auto-envío)
         for guild in self.bot.guilds:
             shop_channel = discord.utils.get(guild.text_channels, name=config.SHOP_CHANNEL_NAME)
             if shop_channel:
@@ -109,7 +114,7 @@ class Events(commands.Cog):
                     embed.set_footer(text="Hell System • Economy")
                     await shop_channel.send(embed=embed)
 
-        # Check Commands Channel
+        # 4. Check Commands Channel
         c_ch = self.bot.get_channel(config.CMD_CHANNEL_ID)
         if c_ch:
             async for m in c_ch.history(limit=10):
