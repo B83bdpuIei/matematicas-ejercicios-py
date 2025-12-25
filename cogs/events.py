@@ -9,7 +9,7 @@ import config
 # ==========================================
 class RoleButton(discord.ui.Button):
     def __init__(self, label, role_id):
-        # ID Personalizada para persistencia
+        # Usamos role_id en el custom_id para que sea único y persistente
         super().__init__(label=label, style=discord.ButtonStyle.secondary, custom_id=f"role_{role_id}")
         self.role_id = role_id
 
@@ -23,17 +23,13 @@ class RoleButton(discord.ui.Button):
                 await interaction.user.add_roles(role)
                 await interaction.response.send_message(f"➕ Added {role.name}", ephemeral=True)
         else:
-            await interaction.response.send_message("❌ Role config error. Check IDs in config.py", ephemeral=True)
+            await interaction.response.send_message("❌ Role not found (Config Error).", ephemeral=True)
 
 class RolesView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None) # Persistente
+        super().__init__(timeout=None)
         for label, role_id in config.ROLES_CONFIG.items():
             self.add_item(RoleButton(label, role_id))
-
-# ==========================================
-# ⚙️ MAIN COG
-# ==========================================
 
 class Events(commands.Cog):
     def __init__(self, bot):
@@ -72,30 +68,29 @@ class Events(commands.Cog):
     # --- ON READY (AUTO-SEND & PERSISTENCE) ---
     @commands.Cog.listener()
     async def on_ready(self):
-        # 1. Registrar la vista para que los botones funcionen siempre
+        # 1. Registrar botones para que funcionen siempre
         self.bot.add_view(RolesView())
         print("[EVENTS] Roles View Registered.")
 
-        # 2. AUTO-ENVÍO DEL PANEL DE ROLES
-        roles_channel = self.bot.get_channel(config.ROLES_CHANNEL_ID) # ID: 1449083960578670614
+        # 2. AUTO-ENVÍO DEL PANEL DE ROLES (Canal 1449083960578670614)
+        roles_channel = self.bot.get_channel(config.ROLES_CHANNEL_ID)
         if roles_channel:
             msg_exists = False
-            # Buscar si ya enviamos el panel antes
             async for m in roles_channel.history(limit=20):
                 if m.author == self.bot.user and m.embeds:
                     if "NOTIFICATIONS & ACCESS" in (m.embeds[0].title or ""):
                         msg_exists = True
                         break
             
-            # Si no existe, lo enviamos
             if not msg_exists:
-                await roles_channel.purge(limit=5) # Limpieza opcional antes de enviar
+                # Si no existe (porque lo borraste), enviamos el nuevo que funciona
+                await roles_channel.purge(limit=5)
                 embed = discord.Embed(title="🔔 **NOTIFICATIONS & ACCESS**", description="> Click buttons below to toggle roles.\n> Select channels you want to see.\n-----------------------------", color=0x990000)
                 embed.set_footer(text="Hell Legion System • Auto-Roles")
                 await roles_channel.send(embed=embed, view=RolesView())
                 print("[EVENTS] Roles Panel Sent.")
 
-        # 3. Check Shop Channel (Misma lógica, auto-envío)
+        # 3. Check Shop Channel
         for guild in self.bot.guilds:
             shop_channel = discord.utils.get(guild.text_channels, name=config.SHOP_CHANNEL_NAME)
             if shop_channel:
@@ -134,7 +129,6 @@ class Events(commands.Cog):
                 embed.set_footer(text="HELL SYSTEM • Commands")
                 await c_ch.send(embed=embed)
 
-    # --- MEMBER UPDATE ---
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         name_check = after.global_name if after.global_name else after.name
@@ -157,7 +151,6 @@ class Events(commands.Cog):
                             await msg.remove_reaction(config.EMOJI_PARTY_NEW, after)
                 except: pass
 
-    # --- MESSAGE CLEANING ---
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot: return
