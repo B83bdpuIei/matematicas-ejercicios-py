@@ -1,4 +1,3 @@
-# config.py
 import os
 
 # ====================
@@ -18,25 +17,25 @@ MINIGAMES_CHANNEL_ID = 1450244729848598618
 DB_CHANNEL_ID = 1451330350436323348
 
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
-SUPPORT_TEXT = "! HELL WIPES FRIDAY 100€"
+
+# CAMBIO: TEXTO DE SOPORTE ACTUALIZADO
+SUPPORT_TEXT = "! HELL WIPES SATURDAY"
 SUPPORT_ROLE_ID = 1336477737594130482
 
 # ====================
-# 🔘 CONFIGURACIÓN DE AUTO-ROLES
+# 🔘 CONFIGURACIÓN DE AUTO-ROLES (TUS IDs)
 # ====================
-# ⚠️ IMPORTANTE: Sustituye los 0 por las IDs REALES de tus roles de Discord.
-# Si no pones las IDs, los botones darán "Interacción fallida".
 ROLES_CONFIG = {
-    "Ping": 0,
-    "Wipes": 0,
-    "News": 0,
-    "Rollbacks": 0,
-    "Events": 0,
-    "Giveaways": 0,
-    "Announcements": 0,
-    "Polls": 0,
-    "Ban / Warns": 0,
-    "Patchs": 0
+    "Ping": 1199101577127014541,
+    "Wipes": 1210709945339875328,
+    "News": 1210710127871787050,
+    "Rollbacks": 1210710910499299349,
+    "Events": 1326887310331220028,
+    "Giveaways": 1326887498856661053,
+    "Announcements": 1326887647406329918,
+    "Polls": 1326887768923701300,
+    "Ban / Warns": 1326887925547274250,
+    "Patchs": 1326888505216864361
 }
 
 # ====================
@@ -89,7 +88,7 @@ EMOJI_GIVEAWAY_ENDED_RED = SERVER_EMOJIS["Red"]
 EMOJI_GIVEAWAY_WINNER_CROWN = SERVER_EMOJIS["yelow_crown"]
 EMOJI_VAULT_WAIT = SERVER_EMOJIS["Red_Clock"]
 EMOJI_VAULT_DENIED = SERVER_EMOJIS["warn"]
-EMOJI_WARN = SERVER_EMOJIS["warn"] # Nuevo alias
+EMOJI_WARN = SERVER_EMOJIS["warn"]
 
 # DATOS FIJOS
 IMG_ARK_DROP = "https://ark.wiki.gg/images/e/e3/Supply_Crate_Level_60.png"
@@ -117,7 +116,7 @@ DATA_POKEMON = [
     {"url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", "type": "Fire", "name": "Charizard"}
 ]
 
-# VARIABLES GLOBALES DE DATOS (Memoria RAM)
+# VARIABLES GLOBALES
 points_data = {} 
 giveaways_data = {} 
 vault_state = {"active": False, "code": None, "prize": None, "message_id": None, "hints_task": None}
