@@ -4,28 +4,46 @@ import random
 import asyncio
 import config
 
+# ==========================================
+# 🦕 DINO GAME (CON PUNTOS)
+# ==========================================
+
 class DinoModal(discord.ui.Modal, title="🦖 WHO IS THAT DINO?"):
     answer_input = discord.ui.TextInput(label="Dino Name", placeholder="Enter name...", required=True)
+
     def __init__(self, correct_answer):
         super().__init__()
         self.correct_answer = correct_answer
         self.view_ref = None
+
     async def on_submit(self, interaction: discord.Interaction):
         guess = self.answer_input.value.strip().lower()
+        
         if self.view_ref and self.view_ref.grabbed:
-             await interaction.response.send_message("❌ Someone was faster.", ephemeral=True)
+             await interaction.response.send_message("❌ Too late!", ephemeral=True)
              return
+
         if guess == self.correct_answer.lower():
             if self.view_ref: self.view_ref.grabbed = True 
+            
+            # 🔥 PUNTOS
             points_won = 200 
             uid = str(interaction.user.id)
             config.points_data[uid] = config.points_data.get(uid, 0) + points_won
-            try: await interaction.response.send_message(f"{config.EMOJI_CORRECT} **CORRECT!**", ephemeral=True)
+            
+            try: await interaction.response.send_message(f"{config.EMOJI_CORRECT} **CORRECT!** (+{points_won} pts)", ephemeral=True)
             except: pass
+
             embed = discord.Embed(color=0x00FF00)
-            embed.description = (f"{config.EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n{config.EMOJI_ANSWER} **ANSWER:** `{self.correct_answer}`\n{config.EMOJI_POINTS} **POINTS:** +{points_won}")
+            embed.description = (
+                f"{config.EMOJI_WINNER} **WINNER:** {interaction.user.mention}\n"
+                f"{config.EMOJI_ANSWER} **ANSWER:** `{self.correct_answer}`\n"
+                f"{config.EMOJI_POINTS} **POINTS:** +{points_won}"
+            )
             embed.set_footer(text="Hell System • Dino Games")
+            
             if interaction.channel: await interaction.channel.send(embed=embed)
+            
             try:
                 view = self.view_ref 
                 for child in view.children: child.disabled = True
@@ -40,16 +58,20 @@ class DinoView(discord.ui.View):
         super().__init__(timeout=None)
         self.correct_dino = correct_dino
         self.grabbed = False 
+
     @discord.ui.button(label="GUESS THE DINO", style=discord.ButtonStyle.primary, emoji="❓", custom_id="dino_guess_btn_v2")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.grabbed:
-            await interaction.response.send_message("❌ Round ended.", ephemeral=True)
+            await interaction.response.send_message("❌ Ended.", ephemeral=True)
             return
         modal = DinoModal(self.correct_dino)
         modal.view_ref = self 
         await interaction.response.send_modal(modal)
 
-# --- GAMES ---
+# ==========================================
+# 🎮 MINIGAMES (CON PUNTOS)
+# ==========================================
+
 class ArkDropView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.grabbed = False
     @discord.ui.button(label="CLAIM DROP", style=discord.ButtonStyle.danger, emoji="🎁", custom_id="drop_claim_btn")
@@ -57,16 +79,20 @@ class ArkDropView(discord.ui.View):
         if self.grabbed: return 
         self.grabbed = True
         try:
+            # 🔥 PUNTOS
             uid = str(interaction.user.id)
             config.points_data[uid] = config.points_data.get(uid, 0) + 200
+            
             button.label = f"Loot of {interaction.user.name}"
             button.style = discord.ButtonStyle.secondary
             button.disabled = True
+            
             embed = interaction.message.embeds[0]
             embed.color = discord.Color.dark_grey()
             embed.set_footer(text=f"Claimed by: {interaction.user.display_name} (+200 Points)")
+            
             await interaction.response.edit_message(embed=embed, view=self)
-            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop!", ephemeral=False)
+            await interaction.followup.send(f"🔴 **{interaction.user.mention}** opened the Red Drop and got **+200 Points**!", ephemeral=False)
             self.stop()
         except: pass
 
@@ -80,7 +106,7 @@ class ArkTameView(discord.ui.View):
                 uid = str(interaction.user.id)
                 config.points_data[uid] = config.points_data.get(uid, 0) + 200
                 await interaction.response.send_message(f"🦕 **TAMED!** {interaction.user.mention} gave {food} to the {self.dino_name} (+200 pts).", ephemeral=False)
-            else: await interaction.response.send_message(f"❌ The {self.dino_name} rejects {food}. It fled!", ephemeral=False)
+            else: await interaction.response.send_message(f"❌ The {self.dino_name} fled!", ephemeral=False)
             for child in self.children: child.disabled = True
             await interaction.message.edit(view=self)
             self.stop()
@@ -100,18 +126,18 @@ class ArkCraftView(discord.ui.View):
                 uid = str(interaction.user.id)
                 config.points_data[uid] = config.points_data.get(uid, 0) + 200
                 await interaction.response.send_message(f"🔨 **Correct!** {interaction.user.mention} crafted the item (+200 pts).", ephemeral=False)
-            else: await interaction.response.send_message("❌ Wrong material. It broke.", ephemeral=False)
+            else: await interaction.response.send_message("❌ Wrong material.", ephemeral=False)
             for child in self.children: child.disabled = True
             await interaction.message.edit(view=self)
             self.stop()
         except: pass
-    @discord.ui.button(label="Metal", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Metal / Ingots", style=discord.ButtonStyle.secondary)
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Metal")
-    @discord.ui.button(label="Stone/Wood", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Stone / Wood", style=discord.ButtonStyle.secondary)
     async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Stone/Wood")
-    @discord.ui.button(label="Fiber/Hide", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Hide / Fiber", style=discord.ButtonStyle.secondary)
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Hide/Fiber")
-    @discord.ui.button(label="Advanced", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Electronics / Poly", style=discord.ButtonStyle.success)
     async def b4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Advanced")
 
 class ArkImprintView(discord.ui.View):
@@ -212,7 +238,6 @@ class Minigames(commands.Cog):
         # LÓGICA PARA DESHABILITAR EL ANTERIOR Y PONERLO GRIS
         if self.last_dino_msg:
             try:
-                # Recuperar la vista vieja si es posible, o crear una dummy deshabilitada
                 view = discord.ui.View()
                 btn = discord.ui.Button(label="GAME ENDED", style=discord.ButtonStyle.secondary, disabled=True, emoji="🔒")
                 view.add_item(btn)
@@ -236,7 +261,6 @@ class Minigames(commands.Cog):
         
         if self.last_minigame_msg:
             try:
-                # Poner el anterior en gris
                 view = discord.ui.View()
                 btn = discord.ui.Button(label="EXPIRED", style=discord.ButtonStyle.secondary, disabled=True)
                 view.add_item(btn)
@@ -247,7 +271,7 @@ class Minigames(commands.Cog):
 
     async def spawn_game(self, channel):
         game_type = random.randint(1, 6)
-        # (Resto de la lógica de spawn igual, ya está corregida arriba)
+        
         if game_type == 1:
             embed = discord.Embed(title="RED SUPPLY DROP INCOMING!", description="Contains high-level loot. Claim it fast!", color=discord.Color.red())
             embed.set_image(url=config.IMG_ARK_DROP)
