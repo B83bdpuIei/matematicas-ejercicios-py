@@ -1,13 +1,14 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import os
 import asyncio
 import threading
+import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import config # Importamos TODA la configuración para usar iconos y canales
+import config 
 
 # ==========================================
-# 🚑 KEEP ALIVE (Para que no se duerma en Render)
+# 🚑 KEEP ALIVE
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -41,7 +42,6 @@ class HellBot(commands.Bot):
         super().__init__(command_prefix='!', intents=intents, help_command=None)
 
     async def setup_hook(self):
-        # Cargar todos los módulos
         extensions = [
             'cogs.systems',   
             'cogs.minigames', 
@@ -53,59 +53,88 @@ class HellBot(commands.Bot):
                 await self.load_extension(ext)
                 print(f"✅ Loaded: {ext}")
             except Exception as e:
-                print(f"❌ Error loading {ext}: {e}")
+                print(f"❌ ERROR CRÍTICO cargando {ext}: {e}")
 
-        # Sincronizar comandos de barra
         try:
             synced = await self.tree.sync()
-            print(f"🔄 Slash Commands Synced: {len(synced)}")
+            print(f"🔄 Slash Commands sincronizados: {len(synced)}")
         except Exception as e:
-            print(f"⚠️ Slash Sync Error: {e}")
+            print(f"⚠️ Error sync slash: {e}")
+
+        # Iniciar el barrendero inteligente
+        self.channel_sweeper.start()
 
     async def on_ready(self):
         print(f"🔥 HELL SYSTEM ONLINE: {self.user} (ID: {self.user.id})")
 
-    # 🔥 GESTOR DE MENSAJES CENTRAL (Sugerencias + Limpieza) 🔥
+    # 🔥 CAPA 1: BORRADO INMEDIATO (Al escribir)
     async def on_message(self, message):
         if message.author.bot: return
 
-        # 1. SISTEMA DE SUGERENCIAS (.suggest)
-        # Si estamos en el canal de sugerencias y empieza por .suggest
+        # Canal Sugerencias
         if message.channel.id == config.SUGGEST_CHANNEL_ID:
             if message.content.startswith(".suggest"):
                 txt = message.content[8:].strip()
                 if txt:
-                    # Borramos el mensaje del usuario
                     try: await message.delete() 
                     except: pass
-                    
-                    # Creamos el embed bonito
                     embed = discord.Embed(description=f"**{txt}**", color=0xffaa00)
                     embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
                     msg = await message.channel.send(embed=embed)
-                    
-                    # Añadimos reacciones
                     await msg.add_reaction(config.CHECK_ICON)
                     await msg.add_reaction(config.CROSS_ICON)
             else:
-                # Si escribe algo que no es una sugerencia, se borra
                 try: await message.delete() 
-                except: pass
-            return # Paramos aquí para este canal
-
-        # 2. CANAL DE COMANDOS (Limpieza + Ejecución)
-        if message.channel.id == config.CMD_CHANNEL_ID:
-            # PRIMERO: Intentamos procesar si es un comando (como !recipes)
-            await self.process_commands(message)
-            
-            # SEGUNDO: Si no es un comando de barra (/), programamos su borrado
-            if message.type != discord.MessageType.chat_input_command:
-                try: await message.delete(delay=2) 
                 except: pass
             return
 
-        # 3. RESTO DE CANALES (Procesar comandos normales)
+        # Canal Comandos
+        if message.channel.id == config.CMD_CHANNEL_ID:
+            # 1. Ejecutar comando (ej: !recipes)
+            await self.process_commands(message)
+            
+            # 2. Si NO es un comando de barra (/), programar borrado rápido
+            if message.type != discord.MessageType.chat_input_command:
+                try: await message.delete(delay=3) 
+                except: pass
+            return
+
+        # Resto de canales
         await self.process_commands(message)
+
+    # 🔥 CAPA 2: BARRENDERO INTELIGENTE (Cada 1 minuto)
+    @tasks.loop(minutes=1)
+    async def channel_sweeper(self):
+        await self.wait_until_ready()
+        channel = self.get_channel(config.CMD_CHANNEL_ID)
+        if not channel: return
+
+        # Hora actual en UTC (Discord usa UTC)
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        def check_msg(m):
+            # 1. PROTECCIÓN: No borrar nunca el menú principal
+            if m.author == self.user and m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
+                return False
+            
+            # Calculamos edad del mensaje en segundos
+            age = (now - m.created_at).total_seconds()
+
+            # 2. MENSAJES DEL BOT (Tus respuestas) -> Borrar SOLO si tienen más de 2 MINUTOS (120s)
+            if m.author == self.user:
+                return age > 120
+            
+            # 3. MENSAJES DE USUARIOS (Basura) -> Borrar si tienen más de 10 segundos
+            # (Esto es por si la Capa 1 falló y no lo borró al momento)
+            return age > 10
+
+        try:
+            # Pasa la escoba revisando las reglas de arriba
+            deleted = await channel.purge(limit=50, check=check_msg)
+            if len(deleted) > 0:
+                print(f"[SWEEPER] Limpieza: {len(deleted)} mensajes eliminados.")
+        except Exception as e:
+            print(f"[SWEEPER ERROR] {e}")
 
 bot = HellBot()
 
@@ -113,4 +142,4 @@ if __name__ == "__main__":
     if config.TOKEN: 
         bot.run(config.TOKEN)
     else: 
-        print("❌ TOKEN NOT FOUND")
+        print("❌ ERROR: TOKEN NO ENCONTRADO EN CONFIG.PY")
