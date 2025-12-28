@@ -1,22 +1,20 @@
 # main.py
-# EL CEREBRO DE ARRANQUE
-
 import discord
 from discord.ext import commands
 import os
 import asyncio
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from config import TOKEN # Importamos el token de config
+from config import TOKEN, CMD_CHANNEL_ID # Importamos config
 
 # ==========================================
-# 🚑 FAKE WEB SERVER
+# 🚑 KEEP ALIVE
 # ==========================================
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"HELL SYSTEM ACTIVE")
+        self.wfile.write(b"HELL SYSTEM ONLINE")
     def do_HEAD(self):
         self.send_response(200)
         self.end_headers()
@@ -31,7 +29,7 @@ def run_fake_server():
 threading.Thread(target=run_fake_server, daemon=True).start()
 
 # ==========================================
-# ⚙️ ARRANQUE DEL BOT
+# ⚙️ BOT SETUP
 # ==========================================
 intents = discord.Intents.default()
 intents.members = True
@@ -44,35 +42,44 @@ class HellBot(commands.Bot):
         super().__init__(command_prefix='!', intents=intents, help_command=None)
 
     async def setup_hook(self):
-        # Lista de archivos a cargar desde la carpeta cogs
         extensions = [
-            'cogs.systems',   # Vault, Database, Giveaways, Puntos
-            'cogs.minigames', # Dino, Drop, Crafting, etc.
-            'cogs.events',    # On_message, Support Roles, Shop
-            'cogs.embeds'     # <--- AQUI IRÁ EL NUEVO SISTEMA (LO CREAREMOS VACIO O LLENO LUEGO)
+            'cogs.systems',   
+            'cogs.minigames', 
+            'cogs.events',    
+            'cogs.embeds'     
         ]
-
         for ext in extensions:
             try:
                 await self.load_extension(ext)
-                print(f"✅ Cargado: {ext}")
+                print(f"✅ Loaded: {ext}")
             except Exception as e:
-                print(f"❌ Error cargando {ext}: {e}")
+                print(f"❌ Error loading {ext}: {e}")
 
-        # Sincronizar comandos de barra (/)
         try:
             synced = await self.tree.sync()
-            print(f"🔄 Comandos Slash sincronizados: {len(synced)}")
+            print(f"🔄 Slash Commands Synced: {len(synced)}")
         except Exception as e:
-            print(f"⚠️ Error sync slash: {e}")
+            print(f"⚠️ Slash Sync Error: {e}")
 
     async def on_ready(self):
         print(f"🔥 HELL SYSTEM ONLINE: {self.user} (ID: {self.user.id})")
 
+    # 🔥 LIMPIEZA DE CANAL COMANDOS (AQUÍ ES INMORTAL) 🔥
+    async def on_message(self, message):
+        if message.author.bot: return
+
+        # Si es el canal de comandos, borrar TODO lo que no sea slash command
+        if message.channel.id == CMD_CHANNEL_ID:
+            if message.type == discord.MessageType.chat_input_command: return 
+            try: await message.delete(delay=2) 
+            except: pass
+            return
+        
+        # Procesar otros comandos si los hubiera
+        await self.process_commands(message)
+
 bot = HellBot()
 
 if __name__ == "__main__":
-    if TOKEN:
-        bot.run(TOKEN)
-    else:
-        print("❌ ERROR: No hay TOKEN en config.py o variables de entorno.")
+    if TOKEN: bot.run(TOKEN)
+    else: print("❌ TOKEN NOT FOUND")
