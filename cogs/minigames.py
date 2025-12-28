@@ -106,14 +106,14 @@ class ArkTameView(discord.ui.View):
                 uid = str(interaction.user.id)
                 config.points_data[uid] = config.points_data.get(uid, 0) + 200
                 await interaction.response.send_message(f"🦕 **TAMED!** {interaction.user.mention} gave {food} to the {self.dino_name} (+200 pts).", ephemeral=False)
-            else: await interaction.response.send_message(f"❌ The {self.dino_name} fled!", ephemeral=False)
+            else: await interaction.response.send_message(f"❌ The {self.dino_name} rejects {food}. It fled!", ephemeral=False)
             for child in self.children: child.disabled = True
             await interaction.message.edit(view=self)
             self.stop()
         except: pass
-    @discord.ui.button(label="Raw Meat 🥩", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Raw Meat 🥩", style=discord.ButtonStyle.danger, custom_id="tm_meat")
     async def meat(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Raw Meat")
-    @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Mejoberries 🫐", style=discord.ButtonStyle.primary, custom_id="tm_berry")
     async def berries(self, interaction: discord.Interaction, button: discord.ui.Button): await self.feed(interaction, "Mejoberries")
 
 class ArkCraftView(discord.ui.View):
@@ -126,18 +126,18 @@ class ArkCraftView(discord.ui.View):
                 uid = str(interaction.user.id)
                 config.points_data[uid] = config.points_data.get(uid, 0) + 200
                 await interaction.response.send_message(f"🔨 **Correct!** {interaction.user.mention} crafted the item (+200 pts).", ephemeral=False)
-            else: await interaction.response.send_message("❌ Wrong material.", ephemeral=False)
+            else: await interaction.response.send_message("❌ Wrong material. It broke.", ephemeral=False)
             for child in self.children: child.disabled = True
             await interaction.message.edit(view=self)
             self.stop()
         except: pass
-    @discord.ui.button(label="Metal / Ingots", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Metal / Ingots", style=discord.ButtonStyle.secondary, custom_id="cr_metal")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Metal")
-    @discord.ui.button(label="Stone / Wood", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Stone / Wood", style=discord.ButtonStyle.secondary, custom_id="cr_stone")
     async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Stone/Wood")
-    @discord.ui.button(label="Hide / Fiber", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Hide / Fiber", style=discord.ButtonStyle.secondary, custom_id="cr_hide")
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Hide/Fiber")
-    @discord.ui.button(label="Electronics / Poly", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Electronics / Poly", style=discord.ButtonStyle.success, custom_id="cr_adv")
     async def b4(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check_mat(interaction, "Advanced")
 
 class ArkImprintView(discord.ui.View):
@@ -153,22 +153,22 @@ class ArkImprintView(discord.ui.View):
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(view=self)
             else:
-                await interaction.response.send_message(f"😭 Baby wanted **{self.needs}**.", ephemeral=False)
+                await interaction.response.send_message(f"😭 The baby wanted **{self.needs}**. It got angry and left!", ephemeral=False)
                 embed = interaction.message.embeds[0]; embed.color = discord.Color.red(); embed.title = "Rearing FAILED"
                 for child in self.children: child.disabled = True
                 await interaction.message.edit(embed=embed, view=self)
             self.stop()
         except: pass
-    @discord.ui.button(label="Cuddle 🧸", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Cuddle 🧸", style=discord.ButtonStyle.primary, custom_id="imp_cud")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Cuddle")
-    @discord.ui.button(label="Walk 🚶", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Walk 🚶", style=discord.ButtonStyle.success, custom_id="imp_wlk")
     async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Walk")
-    @discord.ui.button(label="Feed 🍖", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Feed 🍖", style=discord.ButtonStyle.danger, custom_id="imp_fed")
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.check(interaction, "Feed")
 
 class ArkAlphaView(discord.ui.View):
     def __init__(self, win, loss, chance): super().__init__(timeout=None); self.win = win; self.loss = loss; self.chance = chance; self.grabbed = False
-    @discord.ui.button(label="🗡️ ATTACK ALPHA", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="🗡️ ATTACK ALPHA", style=discord.ButtonStyle.danger, custom_id="alpha_atk")
     async def attack(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.grabbed: return
         self.grabbed = True
@@ -200,17 +200,16 @@ class PokemonVisualView(discord.ui.View):
             await interaction.message.edit(view=self)
             self.stop()
         except: pass
-    @discord.ui.button(label="Fire 🔥", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Fire 🔥", style=discord.ButtonStyle.danger, custom_id="pk_fir")
     async def b1(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Fire")
-    @discord.ui.button(label="Water 💧", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Water 💧", style=discord.ButtonStyle.primary, custom_id="pk_wat")
     async def b2(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Water")
-    @discord.ui.button(label="Grass 🌿", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Grass 🌿", style=discord.ButtonStyle.success, custom_id="pk_gra")
     async def b3(self, interaction: discord.Interaction, button: discord.ui.Button): await self.guess(interaction, "Grass")
 
 class Minigames(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # VARIABLES LOCALES - ESTO SOLUCIONA EL ERROR DE RENDER
         self.last_dino_msg = None
         self.last_minigame_msg = None
         
@@ -224,9 +223,28 @@ class Minigames(commands.Cog):
     @commands.command(name="recipes")
     async def show_recipes(self, ctx):
         embed = discord.Embed(title=f"{config.EMOJI_BLOOD} **HELL RECIPES** {config.EMOJI_BLOOD}", color=0x990000)
+        embed.description = "Custom crafting recipes for this season."
         embed.set_image(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png") 
-        recipes = [("Sweet Veg. Cake", "50 Cementing Paste"), ("Kibble", "1 Fiber"), ("Colors", "1 Thatch"), ("Shadow Steak", "1 Raw Meat"), ("Mindwipe Tonic", "200 Mejoberries"), ("Medical Brew", "1 Tintoberry")]
-        for name, ing in recipes: embed.add_field(name=f"**{name}**", value=f"{config.HELL_ARROW} {ing}", inline=True)
+        
+        # LISTA DE RECETAS COMPLETA (12 ITEMS)
+        recipes = [
+            ("🍰 Sweet Veg. Cake", "50 Cementing Paste"),
+            ("🥚 Kibble", "1 Fiber"),
+            ("🎨 Colors", "1 Thatch"),
+            ("🥩 Shadow Steak", "1 Raw Meat"),
+            ("🧠 Mindwipe Tonic", "200 Mejoberries"),
+            ("💉 Medical Brew", "1 Tintoberry"),
+            ("⚔️ Battle Tartare", "10 Crystal"),
+            ("🍺 Beer Jar", "5 Thatch"),
+            ("🌵 Cactus Broth", "50 Stone"),
+            ("🍄 Mushroom Brew", "5 Aquatic Mushroom"),
+            ("🌶️ Focal Chili", "100 Raw Metal"),
+            ("🦗 Bug Repellent", "1 Chitin/Keratin")
+        ]
+
+        for name, ing in recipes: 
+            embed.add_field(name=f"**{name}**", value=f"{config.HELL_ARROW} {ing}", inline=True)
+        
         embed.set_footer(text="Hell System • Crafting")
         await ctx.send(embed=embed)
 
@@ -235,7 +253,6 @@ class Minigames(commands.Cog):
         channel = self.bot.get_channel(config.DINO_CHANNEL_ID)
         if not channel: return
         
-        # LÓGICA PARA DESHABILITAR EL ANTERIOR Y PONERLO GRIS
         if self.last_dino_msg:
             try:
                 view = discord.ui.View()
@@ -248,7 +265,7 @@ class Minigames(commands.Cog):
         scrambled_name = "".join(random.sample(list(dino_real_name.upper()), len(dino_real_name)))
         
         embed = discord.Embed(title=f"{config.EMOJI_DINO_TITLE} WHO IS THE DINO?", color=0xFFA500)
-        embed.description = f"Unscramble the name!\n🧩 **SCRAMBLED:** `{scrambled_name}`\n\nClick the button to answer."
+        embed.description = f"Unscramble the name of this creature!\n\n🧩 **SCRAMBLED:** `{scrambled_name}`\n\nClick the button to answer."
         embed.set_footer(text="Hell System • Dino Games")
         view = DinoView(correct_dino=dino_real_name)
         
