@@ -18,6 +18,10 @@ DB_CHANNEL_ID = 1451330350436323348
 
 SHOP_CHANNEL_NAME = "「🔥」hell-store"
 
+# CANALES DE WIPE (VOZ)
+LAST_WIPE_CHANNEL_ID = 1454812627887853668
+NEXT_WIPE_CHANNEL_ID = 1454813012182569020
+
 # CAMBIO: TEXTO DE SOPORTE ACTUALIZADO
 SUPPORT_TEXT = "! HELL WIPES SATURDAY"
 SUPPORT_ROLE_ID = 1336477737594130482
@@ -123,4 +127,10 @@ vault_state = {"active": False, "code": None, "prize": None, "message_id": None,
 user_cooldowns = {}
 embeds_data = {} 
 autosend_data = {} 
-menus_data = {}
+menus_data = {} 
+# Inicialización de Wipes
+wipes_data = {
+    "last": "27/12/2025", 
+    "next": None, 
+    "next_timestamp": 0
+}
