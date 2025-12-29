@@ -130,7 +130,8 @@ class Events(commands.Cog):
             
             if not menu_exists:
                 embed = discord.Embed(title="🛠️ **SERVER COMMANDS**", color=0x990000)
-                embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{config.HELL_ARROW} **!recipes**\n{config.HELL_ARROW} **!points**\n{config.HELL_ARROW} **.suggest <text>**\n{config.HELL_ARROW} **/whitelistme**", inline=False)
+                # 🔥 CAMBIO AQUÍ: QUITADO .SUGGEST, AÑADIDO !WIPE
+                embed.add_field(name="👤 **PLAYER COMMANDS**", value=f"{config.HELL_ARROW} **!recipes**\n{config.HELL_ARROW} **!points**\n{config.HELL_ARROW} **!wipe**\n{config.HELL_ARROW} **/whitelistme**", inline=False)
                 embed.set_footer(text="HELL SYSTEM • Commands")
                 await c_ch.send(embed=embed)
 
