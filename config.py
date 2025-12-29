@@ -22,12 +22,12 @@ SHOP_CHANNEL_NAME = "「🔥」hell-store"
 LAST_WIPE_CHANNEL_ID = 1454812627887853668
 NEXT_WIPE_CHANNEL_ID = 1454813012182569020
 
-# CAMBIO: TEXTO DE SOPORTE ACTUALIZADO
+# DATOS DE SOPORTE
 SUPPORT_TEXT = "! HELL WIPES SATURDAY"
 SUPPORT_ROLE_ID = 1336477737594130482
 
 # ====================
-# 🔘 CONFIGURACIÓN DE AUTO-ROLES (TUS IDs)
+# 🔘 CONFIGURACIÓN DE AUTO-ROLES
 # ====================
 ROLES_CONFIG = {
     "Ping": 1199101577127014541,
@@ -128,7 +128,6 @@ user_cooldowns = {}
 embeds_data = {} 
 autosend_data = {} 
 menus_data = {} 
-# Inicialización de Wipes
 wipes_data = {
     "last": "27/12/2025", 
     "next": None, 
