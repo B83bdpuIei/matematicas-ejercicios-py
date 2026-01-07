@@ -61,18 +61,21 @@ class HellBot(commands.Bot):
         except Exception as e:
             print(f"⚠️ Error sync slash: {e}")
 
-        # Iniciar el barrendero inteligente
         self.channel_sweeper.start()
 
     async def on_ready(self):
         print(f"🔥 HELL SYSTEM ONLINE: {self.user} (ID: {self.user.id})")
 
-    # 🔥 CAPA 1: BORRADO INMEDIATO (Al escribir)
+    # 🔥 CAPA 1: GESTIÓN DE MENSAJES
     async def on_message(self, message):
         if message.author.bot: return
 
         # Canal Sugerencias
         if message.channel.id == config.SUGGEST_CHANNEL_ID:
+            # EXCEPCIÓN OWNER: Si eres tú, no hace nada (te deja escribir)
+            if message.author.id == config.OWNER_ID:
+                return 
+
             if message.content.startswith(".suggest"):
                 txt = message.content[8:].strip()
                 if txt:
@@ -90,51 +93,35 @@ class HellBot(commands.Bot):
 
         # Canal Comandos
         if message.channel.id == config.CMD_CHANNEL_ID:
-            # 1. Ejecutar comando (ej: !recipes)
             await self.process_commands(message)
-            
-            # 2. Si NO es un comando de barra (/), programar borrado rápido
             if message.type != discord.MessageType.chat_input_command:
                 try: await message.delete(delay=3) 
                 except: pass
             return
 
-        # Resto de canales
         await self.process_commands(message)
 
-    # 🔥 CAPA 2: BARRENDERO INTELIGENTE (Cada 1 minuto)
+    # 🔥 CAPA 2: BARRENDERO
     @tasks.loop(minutes=1)
     async def channel_sweeper(self):
         await self.wait_until_ready()
         channel = self.get_channel(config.CMD_CHANNEL_ID)
         if not channel: return
 
-        # Hora actual en UTC (Discord usa UTC)
         now = datetime.datetime.now(datetime.timezone.utc)
 
         def check_msg(m):
-            # 1. PROTECCIÓN: No borrar nunca el menú principal
             if m.author == self.user and m.embeds and "SERVER COMMANDS" in (m.embeds[0].title or ""):
                 return False
-            
-            # Calculamos edad del mensaje en segundos
             age = (now - m.created_at).total_seconds()
-
-            # 2. MENSAJES DEL BOT (Tus respuestas) -> Borrar SOLO si tienen más de 2 MINUTOS (120s)
             if m.author == self.user:
                 return age > 120
-            
-            # 3. MENSAJES DE USUARIOS (Basura) -> Borrar si tienen más de 10 segundos
-            # (Esto es por si la Capa 1 falló y no lo borró al momento)
             return age > 10
 
         try:
-            # Pasa la escoba revisando las reglas de arriba
             deleted = await channel.purge(limit=50, check=check_msg)
-            if len(deleted) > 0:
-                print(f"[SWEEPER] Limpieza: {len(deleted)} mensajes eliminados.")
-        except Exception as e:
-            print(f"[SWEEPER ERROR] {e}")
+            if len(deleted) > 0: print(f"[SWEEPER] Limpieza: {len(deleted)}")
+        except: pass
 
 bot = HellBot()
 
@@ -142,4 +129,4 @@ if __name__ == "__main__":
     if config.TOKEN: 
         bot.run(config.TOKEN)
     else: 
-        print("❌ ERROR: TOKEN NO ENCONTRADO EN CONFIG.PY")
+        print("❌ ERROR: TOKEN NO ENCONTRADO")
