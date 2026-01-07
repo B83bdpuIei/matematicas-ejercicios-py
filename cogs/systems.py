@@ -167,7 +167,7 @@ class VaultView(discord.ui.View):
         await interaction.response.send_modal(VaultModal())
 
 # ==========================================
-# 🧭 DASHBOARD NAVIGATION SYSTEM (THE HELENA STYLE)
+# 🧭 DASHBOARD NAVIGATION SYSTEM (/events)
 # ==========================================
 
 # --- 1. HOME SCREEN ---
@@ -176,7 +176,6 @@ class HomeSelect(discord.ui.Select):
         options = [
             discord.SelectOption(label="Base Tour", emoji="🏰", description="Start, Vote, Finish Base Tours"),
             discord.SelectOption(label="Events & Giveaways", emoji="🎉", description="Giveaways, Vaults"),
-            discord.SelectOption(label="Wipe & Polls", emoji="📅", description="Wipe dates, Polls"),
             discord.SelectOption(label="Economy", emoji="💰", description="Manage points")
         ]
         super().__init__(placeholder="Select A Category - Click Here", min_values=1, max_values=1, options=options)
@@ -184,24 +183,20 @@ class HomeSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         val = self.values[0]
         if val == "Base Tour":
-            embed = discord.Embed(title="🏰 **BASE TOUR CONFIGURATION**", description="Manage the 72H Base Tour Event.\n\nSelect an action below.", color=0x2b2d31)
+            embed = discord.Embed(title="🏰 **BASE TOUR MANAGER**", description="**Page: Base Tour**\n\nManage the 72H Base Tour Event.\nSelect an action below.", color=0x2b2d31)
             embed.set_thumbnail(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png") 
             await interaction.response.edit_message(embed=embed, view=BaseTourView())
         elif val == "Events & Giveaways":
-            embed = discord.Embed(title="🎉 **EVENTS & GIVEAWAYS**", description="Launch special events and prizes.", color=0x2b2d31)
+            embed = discord.Embed(title="🎉 **EVENTS MANAGER**", description="**Page: Events & Giveaways**\n\nLaunch special events and prizes.\nSelect an action below.", color=0x2b2d31)
             await interaction.response.edit_message(embed=embed, view=EventsSubView())
-        elif val == "Wipe & Polls":
-            embed = discord.Embed(title="📅 **WIPE MANAGER**", description="Configure server wipes and polls.", color=0x2b2d31)
-            await interaction.response.edit_message(embed=embed, view=WipeSubView())
         elif val == "Economy":
-            embed = discord.Embed(title="💰 **ECONOMY MANAGER**", description="Add or remove player points.", color=0x2b2d31)
+            embed = discord.Embed(title="💰 **ECONOMY MANAGER**", description="**Page: Economy**\n\nAdd or remove player points.\nSelect an action below.", color=0x2b2d31)
             await interaction.response.edit_message(embed=embed, view=EconomySubView())
 
 class HomeView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(HomeSelect())
-        # Botón Exit para cerrar el menú
         exit_btn = discord.ui.Button(label="Exit", style=discord.ButtonStyle.danger, emoji="⛔")
         async def exit_callback(interaction): await interaction.message.delete()
         exit_btn.callback = exit_callback
@@ -211,9 +206,9 @@ class HomeView(discord.ui.View):
 class BaseTourSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="1. Start Base Tour", emoji="▶️"),
-            discord.SelectOption(label="2. Vote Base Tour", emoji="🗳️"),
-            discord.SelectOption(label="3. Finish Base Tour", emoji="🏆")
+            discord.SelectOption(label="1. Start Base Tour", emoji="▶️", description="Create new Base Tour Event"),
+            discord.SelectOption(label="2. Vote Base Tour", emoji="🗳️", description="Open voting phase"),
+            discord.SelectOption(label="3. Finish Base Tour", emoji="🏆", description="Announce winner")
         ]
         super().__init__(placeholder="Select Base Tour Action...", min_values=1, max_values=1, options=options)
     async def callback(self, interaction: discord.Interaction):
@@ -231,9 +226,9 @@ class BaseTourView(discord.ui.View):
 class EventsSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Start Giveaway", emoji="🎉"),
-            discord.SelectOption(label="Start Bulk Giveaway", emoji="🎁"),
-            discord.SelectOption(label="Start Vault Event", emoji="🔐")
+            discord.SelectOption(label="Start Giveaway", emoji="🎉", description="Single winner giveaway"),
+            discord.SelectOption(label="Start Bulk Giveaway", emoji="🎁", description="Multiple giveaways at once"),
+            discord.SelectOption(label="Start Vault Event", emoji="🔐", description="Pin Code cracking event")
         ]
         super().__init__(placeholder="Select Event Action...", min_values=1, max_values=1, options=options)
     async def callback(self, interaction: discord.Interaction):
@@ -246,13 +241,41 @@ class EventsSelect(discord.ui.Select):
 class EventsSubView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(EventsSelect()); self.add_item(BackButton())
 
-# --- 4. WIPE SUB-MENU ---
+# --- 4. ECONOMY SUB-MENU ---
+class EconomySelect(discord.ui.Select):
+    def __init__(self):
+        options = [discord.SelectOption(label="Manage Points", emoji="💳", description="Add/Remove User Points")]
+        super().__init__(placeholder="Select Action...", min_values=1, max_values=1, options=options)
+    async def callback(self, interaction: discord.Interaction):
+        if self.values[0] == "Manage Points": await interaction.response.send_modal(PointsModal())
+
+class EconomySubView(discord.ui.View):
+    def __init__(self): super().__init__(timeout=None); self.add_item(EconomySelect()); self.add_item(BackButton())
+
+# --- COMMON BACK BUTTON ---
+class BackButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Back", style=discord.ButtonStyle.secondary, emoji="◀️")
+    async def callback(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="⚡ **HELL KEEPER ADMINISTRATION**", color=0x2b2d31)
+        embed.set_thumbnail(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png")
+        desc = "**Page: Home**\n\n"
+        desc += f"🏰 **Base Tour**\n↳ Manage Start, Vote & Finish events.\n\n"
+        desc += f"🎉 **Events & Giveaways**\n↳ Manage Giveaways and Vault events.\n\n"
+        desc += f"💰 **Economy**\n↳ Manage player points."
+        embed.description = desc
+        embed.set_footer(text="Select A Category - Click Here")
+        await interaction.response.edit_message(embed=embed, view=HomeView())
+
+# ==========================================
+# 🧭 WIPE NAVIGATION SYSTEM (/config_wipe)
+# ==========================================
 class WipeSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Set Next Wipe", emoji="📅"),
-            discord.SelectOption(label="Finish Polls", emoji="📊"),
-            discord.SelectOption(label="Force Update Channels", emoji="🔄")
+            discord.SelectOption(label="Set Next Wipe", emoji="📅", description="Configure wipe date"),
+            discord.SelectOption(label="Finish Polls", emoji="📊", description="Publish poll results"),
+            discord.SelectOption(label="Force Update Channels", emoji="🔄", description="Refresh voice channels")
         ]
         super().__init__(placeholder="Select Wipe Action...", min_values=1, max_values=1, options=options)
     async def callback(self, interaction: discord.Interaction):
@@ -284,39 +307,10 @@ class WipeSelect(discord.ui.Select):
                 await interaction.followup.send("✅ Done", ephemeral=True)
             except: await interaction.followup.send("❌ Error", ephemeral=True)
 
-class WipeSubView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None); self.add_item(WipeSelect()); self.add_item(BackButton())
-
-# --- 5. ECONOMY SUB-MENU ---
-class EconomySelect(discord.ui.Select):
+class WipeView(discord.ui.View):
     def __init__(self):
-        options = [discord.SelectOption(label="Manage Points", emoji="💳")]
-        super().__init__(placeholder="Select Action...", min_values=1, max_values=1, options=options)
-    async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == "Manage Points": await interaction.response.send_modal(PointsModal())
-
-class EconomySubView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None); self.add_item(EconomySelect()); self.add_item(BackButton())
-
-# --- COMMON BACK BUTTON ---
-class BackButton(discord.ui.Button):
-    def __init__(self):
-        super().__init__(label="Back", style=discord.ButtonStyle.secondary, emoji="◀️")
-    async def callback(self, interaction: discord.Interaction):
-        # VOLVER AL HOME
-        embed = discord.Embed(title="⚡ **HELL KEEPER ADMINISTRATION**", color=0x2b2d31)
-        embed.set_thumbnail(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png")
-        
-        desc = "**Page: Home**\n\n"
-        desc += f"🏰 **Base Tour**\n↳ Manage Start, Vote & Finish events.\n\n"
-        desc += f"🎉 **Events & Giveaways**\n↳ Manage Giveaways and Vault events.\n\n"
-        desc += f"📅 **Wipe & Polls**\n↳ Configure Season dates and Polls.\n\n"
-        desc += f"💰 **Economy**\n↳ Manage player points."
-        
-        embed.description = desc
-        embed.set_footer(text="Select A Category - Click Here")
-        
-        await interaction.response.edit_message(embed=embed, view=HomeView())
+        super().__init__(timeout=None)
+        self.add_item(WipeSelect())
 
 # ==========================================
 # ⚙️ SYSTEMS COG (MAIN)
@@ -343,7 +337,6 @@ class Systems(commands.Cog):
         desc = "**Page: Home**\n\n"
         desc += f"🏰 **Base Tour**\n↳ Manage Start, Vote & Finish events.\n\n"
         desc += f"🎉 **Events & Giveaways**\n↳ Manage Giveaways and Vault events.\n\n"
-        desc += f"📅 **Wipe & Polls**\n↳ Configure Season dates and Polls.\n\n"
         desc += f"💰 **Economy**\n↳ Manage player points."
         
         embed.description = desc
@@ -351,12 +344,12 @@ class Systems(commands.Cog):
         
         await interaction.response.send_message(embed=embed, view=HomeView(), ephemeral=True)
 
-    @app_commands.command(name="config_wipe", description="ADMIN: Quick Wipe Config")
+    @app_commands.command(name="config_wipe", description="ADMIN: Wipe & Polls Manager")
     async def config_wipe_menu(self, interaction: discord.Interaction):
          if not interaction.user.guild_permissions.administrator: return
-         # Redirige directamente al sub-menú Wipe para comodidad
-         embed = discord.Embed(title="📅 **WIPE MANAGER**", description="Configure server wipes and polls.", color=0x2b2d31)
-         await interaction.response.send_message(embed=embed, view=WipeSubView(), ephemeral=True)
+         embed = discord.Embed(title="📅 **WIPE MANAGER**", description="**Page: Wipe Configuration**\n\nManage server wipe cycles and polls.\nSelect an action below.", color=0x2b2d31)
+         embed.add_field(name="Current Data", value=f"Last: `{config.wipes_data.get('last', '?')}`\nNext: `{config.wipes_data.get('next', '?')}`", inline=False)
+         await interaction.response.send_message(embed=embed, view=WipeView(), ephemeral=True)
 
     @commands.command(name="wipe")
     async def wipe_cmd(self, ctx):
