@@ -38,35 +38,28 @@ def parse_poll_result(content, winner_emoji):
     return question, answer
 
 # ==========================================
-# 🏰 BASE TOUR SYSTEM (MODALS)
+# 📝 MODALS (FORMULARIOS)
 # ==========================================
 
+# --- BASE TOUR ---
 class BaseTourStartModal(discord.ui.Modal, title="🏰 START BASE TOUR"):
-    time_input = discord.ui.TextInput(label="End Time (e.g. 10m, 24h or DD/MM HH:MM)", placeholder="24h", required=True)
-    reqs_input = discord.ui.TextInput(label="Requirements (Separate by comma)", style=discord.TextStyle.paragraph, default="Crafting Station, 6 Breeders (Lined), Turret Wall/Tower, Youtube Video #HELL", required=True)
+    time_input = discord.ui.TextInput(label="End Time (e.g. 10m, 24h)", placeholder="24h", required=True)
+    reqs_input = discord.ui.TextInput(label="Requirements", style=discord.TextStyle.paragraph, default="Crafting Station, 6 Breeders (Lined), Turret Wall/Tower, Youtube Video #HELL", required=True)
     rewards_input = discord.ui.TextInput(label="Rewards", style=discord.TextStyle.paragraph, default="15€ Dono Credit, 20 Hell Points", required=True)
-    mentions_input = discord.ui.TextInput(label="Mentions (Role IDs or @everyone)", placeholder="@everyone @here", required=False)
+    mentions_input = discord.ui.TextInput(label="Mentions", placeholder="@everyone @here", required=False)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Calcular tiempo
-        t_str = self.time_input.value
-        seconds = convert_time(t_str)
-        if seconds == -1: # Intentar formato fecha
-             try:
-                 dt = datetime.datetime.strptime(t_str, "%d/%m %H:%M").replace(year=datetime.datetime.now().year)
-                 seconds = int(dt.timestamp() - time.time())
-             except: seconds = 86400 # Default 24h
-        
-        end_ts = int(time.time() + seconds)
-        reqs = [r.strip() for r in self.reqs_input.value.split(',')]
+        sec = convert_time(self.time_input.value)
+        if sec <= 0: sec = 86400
+        end_ts = int(time.time() + sec)
         
         embed = discord.Embed(title=f"{config.EMOJI_FIRE_ANIM} __**72H BASE TOUR EVENT**__ {config.EMOJI_FIRE_ANIM}", color=0x990000)
         embed.description = "> *Show off your fortress. Prove you rule the server.*"
         embed.add_field(name=f"{config.EMOJI_CLOCK_NEW} **TIME REMAINING:**", value=f"<t:{end_ts}:R>", inline=False)
         
         req_text = ""
-        for r in reqs: req_text += f"{config.CHECK_ICON} **{r}**\n"
-        embed.add_field(name=f"{config.HELL_ARROW} **__REQUIREMENTS__**", value=f"> Your tour must show:\n{req_text}", inline=False)
+        for r in self.reqs_input.value.split(','): req_text += f"{config.CHECK_ICON} **{r.strip()}**\n"
+        embed.add_field(name=f"{config.HELL_ARROW} **__REQUIREMENTS__**", value=req_text, inline=False)
         
         rew_text = ""
         for r in self.rewards_input.value.split(','): rew_text += f"> {r.strip()}\n"
@@ -85,18 +78,15 @@ class BaseTourVoteModal(discord.ui.Modal, title="🗳️ START VOTING"):
     mentions = discord.ui.TextInput(label="Mentions", placeholder="@everyone", required=False)
 
     async def on_submit(self, interaction: discord.Interaction):
-        seconds = convert_time(self.time_input.value)
-        if seconds <= 0: seconds = 86400
-        end_ts = int(time.time() + seconds)
+        sec = convert_time(self.time_input.value)
+        if sec <= 0: sec = 86400
+        end_ts = int(time.time() + sec)
 
         embed = discord.Embed(title=f"{config.EMOJI_FIRE_ANIM} __**VOTE: BEST BASE DESIGN**__ {config.EMOJI_FIRE_ANIM}", color=0xFFD700)
         embed.description = "> *The submissions are in. Now the community decides.*\n> *Who built the ultimate fortress?*"
         embed.add_field(name=f"{config.EMOJI_CLOCK_NEW} **VOTING ENDS:**", value=f"<t:{end_ts}:R>", inline=False)
-        
-        embed.add_field(name=f"{config.HELL_ARROW} **__THE CANDIDATES__**", value="", inline=False)
         embed.add_field(name="1️⃣ **OPTION 1**", value=f"> {self.opt1_link.value}", inline=False)
         embed.add_field(name="2️⃣ **OPTION 2**", value=f"> {self.opt2_link.value}", inline=False)
-        
         embed.add_field(name=f"{config.EMOJI_WARN} **REACT BELOW TO VOTE**", value="Only one vote counts!", inline=False)
         
         content = f"||{self.mentions.value}||" if self.mentions.value else ""
@@ -116,11 +106,7 @@ class BaseTourFinishModal(discord.ui.Modal, title="🏆 FINISH BASE TOUR"):
         await interaction.channel.send(embed=embed)
         await interaction.response.send_message("✅ Event Finished!", ephemeral=True)
 
-# ==========================================
-# ⚙️ ADMIN MENU SYSTEM
-# ==========================================
-
-# --- 1. WIPE MENU ---
+# --- WIPE ---
 class WipeConfigModal(discord.ui.Modal, title="⚙️ CONFIGURE NEXT WIPE"):
     date_input = discord.ui.TextInput(label="Date (DD/MM/YYYY)", placeholder="e.g. 02/01/2026", required=True, min_length=10, max_length=10)
     time_input = discord.ui.TextInput(label="Time (HH:MM)", placeholder="e.g. 17:00", required=True, min_length=5, max_length=5)
@@ -130,46 +116,15 @@ class WipeConfigModal(discord.ui.Modal, title="⚙️ CONFIGURE NEXT WIPE"):
             dt = datetime.datetime.strptime(full_str, "%d/%m/%Y %H:%M")
             config.wipes_data["next"] = self.date_input.value.strip()
             config.wipes_data["next_timestamp"] = int(dt.timestamp())
-            try:
-                if c:=interaction.guild.get_channel(config.NEXT_WIPE_CHANNEL_ID): await c.edit(name=f"💀 NEXT WIPE: {config.wipes_data['next']}")
-            except: pass
+            
+            # Actualizar canales inmediatamente
+            if c:=interaction.guild.get_channel(config.NEXT_WIPE_CHANNEL_ID): 
+                await c.edit(name=f"💀 NEXT WIPE: {config.wipes_data['next']}")
+            
             await interaction.response.send_message(f"✅ Wipe Set: {full_str}", ephemeral=True)
         except: await interaction.response.send_message("❌ Invalid Date Format", ephemeral=True)
 
-class WipeControlView(discord.ui.View):
-    def __init__(self, bot_ref): super().__init__(timeout=None); self.bot = bot_ref
-    @discord.ui.button(label="SET NEXT WIPE", style=discord.ButtonStyle.primary, emoji="📅")
-    async def set_wipe(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(WipeConfigModal())
-    @discord.ui.button(label="FORCE UPDATE CHANNELS", style=discord.ButtonStyle.secondary, emoji="🔄")
-    async def force_up(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            guild = interaction.guild
-            if c1:=guild.get_channel(config.LAST_WIPE_CHANNEL_ID): await c1.edit(name=f"🩸 LAST WIPE: {config.wipes_data.get('last','?')}")
-            if c2:=guild.get_channel(config.NEXT_WIPE_CHANNEL_ID): await c2.edit(name=f"💀 NEXT WIPE: {config.wipes_data.get('next','?')}")
-            await interaction.followup.send("✅ Done.", ephemeral=True)
-        except: await interaction.followup.send("❌ Error.", ephemeral=True)
-    @discord.ui.button(label="FINISH POLLS", style=discord.ButtonStyle.success, emoji="🏁")
-    async def finish_polls(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        polls_ch = interaction.guild.get_channel(config.POLLS_CHANNEL_ID)
-        if not polls_ch: return
-        results = []
-        async for m in polls_ch.history(limit=50):
-            if "----" in m.content or not m.reactions: continue
-            try: 
-                win = max(m.reactions, key=lambda r: r.count)
-                if win.count > 1:
-                    q, a = parse_poll_result(m.content, win.emoji)
-                    results.append(f"{config.HELL_ARROW} **{q}** : {a}")
-            except: continue
-        if results:
-            embed = discord.Embed(title="📢 POLL RESULTS", description="\n".join(reversed(results)), color=0x990000)
-            await interaction.followup.send(embed=embed)
-        else: await interaction.followup.send("❌ No polls found.", ephemeral=True)
-
-# --- 2. EVENTS MENU ---
+# --- OTHERS ---
 class GiveawayModal(discord.ui.Modal, title="🎉 START GIVEAWAY"):
     time_str = discord.ui.TextInput(label="Time (e.g. 10m, 1h)", placeholder="10m", required=True)
     prize = discord.ui.TextInput(label="Prize", placeholder="Nitrado Code", required=True)
@@ -177,13 +132,10 @@ class GiveawayModal(discord.ui.Modal, title="🎉 START GIVEAWAY"):
     is_bulk = discord.ui.TextInput(label="Bulk? (yes/no)", placeholder="no", required=False, default="no")
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Lógica simplificada de llamada al sistema de sorteo
         sec = convert_time(self.time_str.value)
         if sec <= 0: return await interaction.response.send_message("❌ Bad Time", ephemeral=True)
         cog = interaction.client.get_cog("Systems")
-        
         if self.is_bulk.value.lower() == "yes":
-            # Bulk: Se asume que el premio es una lista separada por comas
             await cog.start_bulk_giveaway_logic(interaction, sec, self.prize.value, int(self.winners.value))
         else:
             await cog.start_giveaway_logic(interaction, sec, self.prize.value, int(self.winners.value))
@@ -195,25 +147,6 @@ class VaultModalStart(discord.ui.Modal, title="☠️ START VAULT EVENT"):
         cog = interaction.client.get_cog("Systems")
         await cog.event_vault_logic(interaction, self.code.value, self.prize.value)
 
-class EventsControlView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="START GIVEAWAY", style=discord.ButtonStyle.success, emoji="🎉")
-    async def g_start(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(GiveawayModal())
-    @discord.ui.button(label="VAULT EVENT", style=discord.ButtonStyle.danger, emoji="🔐")
-    async def v_start(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(VaultModalStart())
-    @discord.ui.button(label="BASE TOUR START", style=discord.ButtonStyle.primary, emoji="🏰")
-    async def bt_start(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(BaseTourStartModal())
-    @discord.ui.button(label="BASE TOUR VOTE", style=discord.ButtonStyle.secondary, emoji="🗳️")
-    async def bt_vote(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(BaseTourVoteModal())
-    @discord.ui.button(label="BASE TOUR FINISH", style=discord.ButtonStyle.danger, emoji="🏆")
-    async def bt_finish(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(BaseTourFinishModal())
-
-# --- 3. ECONOMY MENU ---
 class PointsModal(discord.ui.Modal, title="💰 MANAGE POINTS"):
     user_id = discord.ui.TextInput(label="User ID", required=True)
     amount = discord.ui.TextInput(label="Amount", required=True)
@@ -225,39 +158,111 @@ class PointsModal(discord.ui.Modal, title="💰 MANAGE POINTS"):
         else: config.points_data[uid] = max(0, current - amt)
         await interaction.response.send_message(f"✅ Points updated for {uid}", ephemeral=True)
 
-class EconomyControlView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="MANAGE POINTS", style=discord.ButtonStyle.primary, emoji="💳")
-    async def m_points(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(PointsModal())
+class VaultModal(discord.ui.Modal, title="🔐 SECURITY"):
+    code_input = discord.ui.TextInput(label="PIN", min_length=4, max_length=4)
+    async def on_submit(self, interaction: discord.Interaction):
+        if not config.vault_state["active"]: return await interaction.response.send_message("❌ Ended", ephemeral=True)
+        if self.code_input.value == config.vault_state["code"]:
+            config.vault_state["active"] = False
+            uid = str(interaction.user.id)
+            config.points_data[uid] = config.points_data.get(uid, 0) + 2000
+            await interaction.channel.send(f"🎉 {interaction.user.mention} CRACKED THE VAULT! Prize: {config.vault_state['prize']}")
+            await interaction.response.send_message("✅ GG", ephemeral=True)
+        else: await interaction.response.send_message("❌ Access Denied", ephemeral=True)
 
-# --- MASTER MENU (DROPDOWN) ---
-class AdminSelect(discord.ui.Select):
-    def __init__(self, bot):
+class VaultView(discord.ui.View):
+    def __init__(self): super().__init__(timeout=None)
+    @discord.ui.button(label="CRACK", style=discord.ButtonStyle.danger, custom_id="v_crack")
+    async def crack(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(VaultModal())
+
+# ==========================================
+# 🔽 DROPDOWN MENUS (SELECTS)
+# ==========================================
+
+# --- MENU: EVENTS (/events) ---
+class EventsDropdown(discord.ui.Select):
+    def __init__(self):
         options = [
-            discord.SelectOption(label="Wipe & Polls", emoji="📅", description="Manage wipes and poll results"),
-            discord.SelectOption(label="Events & Giveaways", emoji="🎉", description="Giveaways, Base Tours, Vaults"),
-            discord.SelectOption(label="Economy & Points", emoji="💰", description="Add or Remove Player Points")
+            discord.SelectOption(label="Start Giveaway", emoji="🎉", description="Start a single prize giveaway"),
+            discord.SelectOption(label="Start Bulk Giveaway", emoji="🎁", description="Start multiple giveaways at once"),
+            discord.SelectOption(label="Start Vault Event", emoji="🔐", description="Launch a Pin Code cracking event"),
+            discord.SelectOption(label="Base Tour: START", emoji="🏰", description="Announce a new Base Tour"),
+            discord.SelectOption(label="Base Tour: VOTE", emoji="🗳️", description="Open voting for bases"),
+            discord.SelectOption(label="Base Tour: FINISH", emoji="🏆", description="Announce winner"),
+            discord.SelectOption(label="Economy: Manage Points", emoji="💳", description="Add or Remove user points")
         ]
-        super().__init__(placeholder="Select a Category...", min_values=1, max_values=1, options=options)
-        self.bot = bot
+        super().__init__(placeholder="Select an Event Action...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         val = self.values[0]
-        if val == "Wipe & Polls":
-            await interaction.response.send_message("📅 **WIPE CONFIGURATION**", view=WipeControlView(self.bot), ephemeral=True)
-        elif val == "Events & Giveaways":
-            await interaction.response.send_message("🎉 **EVENTS PANEL**", view=EventsControlView(), ephemeral=True)
-        elif val == "Economy & Points":
-            await interaction.response.send_message("💰 **ECONOMY PANEL**", view=EconomyControlView(), ephemeral=True)
+        if val == "Start Giveaway": await interaction.response.send_modal(GiveawayModal())
+        elif val == "Start Bulk Giveaway": 
+            # Pre-fill bulk option
+            m = GiveawayModal(); m.is_bulk.default = "yes"; m.title = "🎁 BULK GIVEAWAY"
+            await interaction.response.send_modal(m)
+        elif val == "Start Vault Event": await interaction.response.send_modal(VaultModalStart())
+        elif val == "Base Tour: START": await interaction.response.send_modal(BaseTourStartModal())
+        elif val == "Base Tour: VOTE": await interaction.response.send_modal(BaseTourVoteModal())
+        elif val == "Base Tour: FINISH": await interaction.response.send_modal(BaseTourFinishModal())
+        elif val == "Economy: Manage Points": await interaction.response.send_modal(PointsModal())
 
-class AdminPanelView(discord.ui.View):
+class EventsView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(EventsDropdown())
+
+# --- MENU: WIPE CONFIG (/config_wipe) ---
+class WipeDropdown(discord.ui.Select):
+    def __init__(self, bot):
+        self.bot = bot
+        options = [
+            discord.SelectOption(label="Set Next Wipe", emoji="📅", description="Configure date/time for next wipe"),
+            discord.SelectOption(label="Force Update Channels", emoji="🔄", description="Fix voice channel names now"),
+            discord.SelectOption(label="Finish Polls", emoji="📊", description="Close and publish poll results")
+        ]
+        super().__init__(placeholder="Select Wipe Configuration...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        val = self.values[0]
+        if val == "Set Next Wipe":
+            await interaction.response.send_modal(WipeConfigModal())
+        elif val == "Force Update Channels":
+            await interaction.response.defer(ephemeral=True)
+            try:
+                guild = interaction.guild
+                last_txt = config.wipes_data.get('last') or "Unknown"
+                next_txt = config.wipes_data.get('next') or "Pending..."
+                
+                if c1:=guild.get_channel(config.LAST_WIPE_CHANNEL_ID): await c1.edit(name=f"🩸 LAST WIPE: {last_txt}")
+                if c2:=guild.get_channel(config.NEXT_WIPE_CHANNEL_ID): await c2.edit(name=f"💀 NEXT WIPE: {next_txt}")
+                await interaction.followup.send("✅ Channels forced update.", ephemeral=True)
+            except Exception as e: await interaction.followup.send(f"❌ Error: {e}", ephemeral=True)
+        elif val == "Finish Polls":
+            await interaction.response.defer(ephemeral=True)
+            polls_ch = interaction.guild.get_channel(config.POLLS_CHANNEL_ID)
+            if not polls_ch: return
+            results = []
+            async for m in polls_ch.history(limit=50):
+                if "----" in m.content or not m.reactions: continue
+                try: 
+                    win = max(m.reactions, key=lambda r: r.count)
+                    if win.count > 1:
+                        q, a = parse_poll_result(m.content, win.emoji)
+                        results.append(f"{config.HELL_ARROW} **{q}** : {a}")
+                except: continue
+            if results:
+                embed = discord.Embed(title="📢 POLL RESULTS", description="\n".join(reversed(results)), color=0x990000)
+                await interaction.followup.send(embed=embed)
+            else: await interaction.followup.send("❌ No polls found.", ephemeral=True)
+
+class WipeView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
-        self.add_item(AdminSelect(bot))
+        self.add_item(WipeDropdown(bot))
 
 # ==========================================
-# ⚙️ SYSTEMS COG
+# ⚙️ SYSTEMS COG (MAIN)
 # ==========================================
 
 class Systems(commands.Cog):
@@ -271,32 +276,40 @@ class Systems(commands.Cog):
         self.wipe_monitor.cancel()
 
     # --- COMMANDS ---
-    @app_commands.command(name="events", description="ADMIN: Open Master Event Menu")
+    @app_commands.command(name="events", description="ADMIN: Open Event Manager")
     async def events_menu(self, interaction: discord.Interaction):
         if not interaction.user.guild_permissions.administrator and interaction.user.id != config.OWNER_ID: return
-        embed = discord.Embed(title="⚡ **HELL KEEPER ADMINISTRATION**", description="Select a module to configure.", color=0x2b2d31)
-        await interaction.response.send_message(embed=embed, view=AdminPanelView(self.bot), ephemeral=True)
+        embed = discord.Embed(title="⚡ **HELL KEEPER ADMINISTRATION**", description="Select an action from the menu below.", color=0x2b2d31)
+        embed.set_thumbnail(url="https://media.discordapp.net/attachments/1329487785857650748/1335660249704693760/recipes.png") # Ejemplo icono
+        embed.add_field(name="🎉 Events", value="Giveaways, Vault, Base Tours", inline=True)
+        embed.add_field(name="💰 Economy", value="Manage Player Points", inline=True)
+        await interaction.response.send_message(embed=embed, view=EventsView(), ephemeral=True)
 
-    @app_commands.command(name="config_wipe", description="ADMIN: Quick Wipe Config")
-    async def config_wipe(self, interaction: discord.Interaction):
+    @app_commands.command(name="config_wipe", description="ADMIN: Wipe & Polls Manager")
+    async def config_wipe_menu(self, interaction: discord.Interaction):
          if not interaction.user.guild_permissions.administrator: return
-         await interaction.response.send_message("⚙️ **WIPE CONFIG**", view=WipeControlView(self.bot), ephemeral=True)
+         embed = discord.Embed(title="⚙️ **WIPE CONFIGURATION**", description="Manage server wipe cycles and polls.", color=0x990000)
+         embed.add_field(name="Current Data", value=f"Last: `{config.wipes_data.get('last', '?')}`\nNext: `{config.wipes_data.get('next', '?')}`", inline=False)
+         await interaction.response.send_message(embed=embed, view=WipeView(self.bot), ephemeral=True)
 
     @commands.command(name="wipe")
     async def wipe_cmd(self, ctx):
-        last = config.wipes_data.get("last", "?")
-        nxt = config.wipes_data.get("next", "?")
+        last = config.wipes_data.get("last", "Unknown")
+        nxt = config.wipes_data.get("next", None)
         ts = config.wipes_data.get("next_timestamp", 0)
+        
         embed = discord.Embed(title="🔥 **HELL CHRONICLES: WIPE SCHEDULE**", color=0x990000)
         embed.add_field(name=f"{config.HELL_ARROW} **LAST WIPE**", value=f"📅 `{last}`", inline=False)
+        
         if nxt and ts > 0:
             embed.add_field(name=f"{config.HELL_ARROW} **NEXT WIPE**", value=f"📅 `{nxt}`\n{config.EMOJI_CLOCK_NEW} <t:{ts}:R>", inline=False)
         else:
              embed.add_field(name=f"{config.HELL_ARROW} **NEXT WIPE**", value="❓ **TBA**", inline=False)
+        
         embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
         await ctx.send(embed=embed)
 
-    # --- LOGIC HELPERS (Called from Modals) ---
+    # --- LOGIC HELPERS ---
     async def start_giveaway_logic(self, interaction, seconds, prize, winners):
         end_ts = int(time.time() + seconds)
         embed = discord.Embed(title=f"{config.EMOJI_PARTY_NEW} GIVEAWAY", color=0x00FF00)
@@ -326,51 +339,43 @@ class Systems(commands.Cog):
         embed = discord.Embed(title="🩸 **VAULT DETECTED**", description=f"Crack the PIN.\nReward: {prize}", color=0x8a0404)
         embed.add_field(name="📡 LEAKED DATA", value=f"`{code[0]}###`", inline=True)
         embed.set_image(url=config.VAULT_IMAGE_URL)
-        
-        # Need to define Vault View locally or import carefully if circular. 
-        # For simplicity, assuming View is defined or we use a basic one here.
-        # Re-defining minimal View here to avoid breakage if copied partially
-        class VaultViewMinimal(discord.ui.View):
-            def __init__(self): super().__init__(timeout=None)
-            @discord.ui.button(label="ATTEMPT HACK", style=discord.ButtonStyle.danger, emoji="☠️", custom_id="vault_btn")
-            async def open_modal(self, i: discord.Interaction, b: discord.ui.Button):
-                # Trigger the modal defined in THIS file earlier would be hard if not in scope.
-                # Since we moved logic to UI classes, we should use the Modal defined at top.
-                from cogs.systems import VaultModal # Circular import trick or define above
-                # Actually, simpler: define VaultModal in `systems.py` globally as we did above.
-                await i.response.send_modal(VaultModal(code=config.vault_state.get('code'))) 
-                # Note: This requires the Modal to be smart. 
-                # To keep it simple for you: The System file already has the modal classes at the top.
-                pass 
-        
-        # We need a proper view. Since VaultModal is defined above, let's use the VaultView defined there?
-        # WAIT. I didn't include VaultView/Modal in the "Top" section of this file provided.
-        # I need to make sure the VAULT LOGIC is fully self-contained in this file I'm giving you.
-        # I will include the Vault Classes below to be safe.
-        
-        msg = await ch.send(embed=embed, view=VaultView()) # VaultView defined below
+        msg = await ch.send(embed=embed, view=VaultView())
         config.vault_state.update({"active": True, "code": code, "prize": prize, "message_id": msg.id})
         await interaction.response.send_message("✅ Vault Started", ephemeral=True)
 
     # --- TASKS ---
     @tasks.loop(minutes=1)
     async def wipe_monitor(self):
+        # Arreglo para que no de error si next es None
         if not config.wipes_data.get("next") or not config.wipes_data.get("next_timestamp"): return
+        
         if int(time.time()) >= config.wipes_data["next_timestamp"]:
             config.wipes_data["last"] = config.wipes_data["next"]
-            config.wipes_data["next"] = None; config.wipes_data["next_timestamp"] = 0
+            config.wipes_data["next"] = None
+            config.wipes_data["next_timestamp"] = 0
             try:
                 g = self.bot.guilds[0]
-                if c:=g.get_channel(config.LAST_WIPE_CHANNEL_ID): await c.edit(name=f"🩸 LAST WIPE: {config.wipes_data['last']}")
-                if c:=g.get_channel(config.NEXT_WIPE_CHANNEL_ID): await c.edit(name="💀 NEXT WIPE: ¿?")
+                if c:=g.get_channel(config.LAST_WIPE_CHANNEL_ID): 
+                    await c.edit(name=f"🩸 LAST WIPE: {config.wipes_data['last']}")
+                if c:=g.get_channel(config.NEXT_WIPE_CHANNEL_ID): 
+                    await c.edit(name="💀 NEXT WIPE: TBA")
             except: pass
 
     @tasks.loop(minutes=2)
     async def backup_task(self):
-        # Save jsons logic (same as before)
-        pass 
-    
-    # ... Giveaways Timer logic (same as before) ...
+        await self.save_json("db_points.json", config.points_data)
+        await self.save_json("db_giveaways.json", config.giveaways_data)
+        await self.save_json("db_wipes.json", config.wipes_data)
+
+    async def save_json(self, filename, data):
+        try:
+            channel = self.bot.get_channel(config.DB_CHANNEL_ID)
+            if channel and data:
+                json_str = json.dumps(data, indent=None)
+                file_obj = discord.File(io.StringIO(json_str), filename=filename)
+                await channel.send(f"Backup {filename}: {int(time.time())}", file=file_obj)
+        except: pass
+
     async def run_giveaway_timer(self, cid, mid, end_time, prize, winners):
         await asyncio.sleep(end_time - time.time())
         try:
@@ -389,25 +394,25 @@ class Systems(commands.Cog):
     @wipe_monitor.before_loop
     async def before_wipe(self): await self.bot.wait_until_ready()
     @backup_task.before_loop
-    async def before_backup(self): await self.bot.wait_until_ready()
-
-# --- MISSING CLASSES (VAULT) TO MAKE IT WORK ---
-class VaultModal(discord.ui.Modal, title="🔐 SECURITY"):
-    code_input = discord.ui.TextInput(label="PIN", min_length=4, max_length=4)
-    async def on_submit(self, interaction):
-        if not config.vault_state["active"]: return await interaction.response.send_message("❌ Ended", ephemeral=True)
-        if self.code_input.value == config.vault_state["code"]:
-            config.vault_state["active"] = False
-            uid = str(interaction.user.id)
-            config.points_data[uid] = config.points_data.get(uid, 0) + 2000
-            await interaction.channel.send(f"🎉 {interaction.user.mention} CRACKED THE VAULT! Prize: {config.vault_state['prize']}")
-            await interaction.response.send_message("✅ GG", ephemeral=True)
-        else: await interaction.response.send_message("❌ Access Denied", ephemeral=True)
-
-class VaultView(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="CRACK", style=discord.ButtonStyle.danger, custom_id="v_crack")
-    async def crack(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(VaultModal())
+    async def before_backup(self): 
+        await self.bot.wait_until_ready()
+        # CARGAR DATOS AL REINICIAR
+        try:
+            channel = self.bot.get_channel(config.DB_CHANNEL_ID)
+            if channel:
+                print("[SYSTEMS] Loading Database...")
+                async for msg in channel.history(limit=50):
+                    if msg.author == self.bot.user and msg.attachments:
+                        fname = msg.attachments[0].filename
+                        try:
+                            data = json.loads(await msg.attachments[0].read())
+                            if fname == "db_points.json": config.points_data = data
+                            elif fname == "db_giveaways.json": config.giveaways_data = data
+                            elif fname == "db_wipes.json": config.wipes_data = data
+                        except: pass
+                # Validar wipes data
+                if "last" not in config.wipes_data: config.wipes_data["last"] = "27/12/2025"
+                if "next" not in config.wipes_data: config.wipes_data["next"] = None
+        except: pass
 
 async def setup(bot): await bot.add_cog(Systems(bot))
