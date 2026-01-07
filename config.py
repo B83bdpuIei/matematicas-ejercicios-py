@@ -4,6 +4,7 @@ import os
 # 🔐 VARIABLES
 # ====================
 TOKEN = os.environ.get("DISCORD_TOKEN")
+OWNER_ID = 827873735121043477 # TU ID (Para saltarte restricciones)
 
 # CANALES
 GIVEAWAY_CHANNEL_ID = 1449849645495746803 
