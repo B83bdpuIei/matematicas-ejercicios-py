@@ -176,6 +176,7 @@ class HomeSelect(discord.ui.Select):
         options = [
             discord.SelectOption(label="Base Tour", emoji="🏰", description="Start, Vote, Finish Base Tours"),
             discord.SelectOption(label="Events & Giveaways", emoji="🎉", description="Giveaways, Vaults"),
+            discord.SelectOption(label="Wipe & Polls", emoji="📅", description="Wipe dates, Polls"),
             discord.SelectOption(label="Economy", emoji="💰", description="Manage points")
         ]
         super().__init__(placeholder="Select A Category - Click Here", min_values=1, max_values=1, options=options)
@@ -189,6 +190,9 @@ class HomeSelect(discord.ui.Select):
         elif val == "Events & Giveaways":
             embed = discord.Embed(title="🎉 **EVENTS MANAGER**", description="**Page: Events & Giveaways**\n\nLaunch special events and prizes.\nSelect an action below.", color=0x2b2d31)
             await interaction.response.edit_message(embed=embed, view=EventsSubView())
+        elif val == "Wipe & Polls":
+            embed = discord.Embed(title="📅 **WIPE MANAGER**", description="**Page: Wipe & Polls**\n\nConfigure server wipes and publish results.\nSelect an action below.", color=0x2b2d31)
+            await interaction.response.edit_message(embed=embed, view=WipeSubView())
         elif val == "Economy":
             embed = discord.Embed(title="💰 **ECONOMY MANAGER**", description="**Page: Economy**\n\nAdd or remove player points.\nSelect an action below.", color=0x2b2d31)
             await interaction.response.edit_message(embed=embed, view=EconomySubView())
@@ -241,7 +245,63 @@ class EventsSelect(discord.ui.Select):
 class EventsSubView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None); self.add_item(EventsSelect()); self.add_item(BackButton())
 
-# --- 4. ECONOMY SUB-MENU ---
+# --- 4. WIPE SUB-MENU ---
+class WipeSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Set Next Wipe", emoji="📅", description="Configure wipe date"),
+            discord.SelectOption(label="Finish Polls", emoji="📊", description="Publish poll results (Today)"),
+            discord.SelectOption(label="Force Update Channels", emoji="🔄", description="Refresh voice channels")
+        ]
+        super().__init__(placeholder="Select Wipe Action...", min_values=1, max_values=1, options=options)
+    async def callback(self, interaction: discord.Interaction):
+        if self.values[0] == "Set Next Wipe": await interaction.response.send_modal(WipeConfigModal())
+        elif self.values[0] == "Finish Polls":
+            await interaction.response.defer(ephemeral=True)
+            polls_ch = interaction.guild.get_channel(config.POLLS_CHANNEL_ID)
+            if not polls_ch: return
+            
+            # 🔥 LÓGICA DE FECHAS CORREGIDA 🔥
+            target_date = None
+            async for last_msg in polls_ch.history(limit=1):
+                 target_date = last_msg.created_at.date() # Coger fecha del ÚLTIMO mensaje
+            
+            if not target_date:
+                return await interaction.followup.send("❌ No polls found.", ephemeral=True)
+
+            results = []
+            async for m in polls_ch.history(limit=50):
+                # SI LA FECHA ES DIFERENTE, PARAMOS
+                if m.created_at.date() != target_date:
+                    break 
+                
+                if "----" in m.content or not m.reactions: continue
+                try: 
+                    win = max(m.reactions, key=lambda r: r.count)
+                    if win.count > 1:
+                        q, a = parse_poll_result(m.content, win.emoji)
+                        results.append(f"{config.HELL_ARROW} **{q}** : {a}")
+                except: continue
+            
+            if results:
+                embed = discord.Embed(title=f"📢 POLL RESULTS ({target_date})", description="\n".join(reversed(results)), color=0x990000)
+                await interaction.followup.send(embed=embed)
+            else: await interaction.followup.send(f"❌ No completed polls found for {target_date}.", ephemeral=True)
+            
+        elif self.values[0] == "Force Update Channels":
+            await interaction.response.defer(ephemeral=True)
+            try:
+                g = interaction.guild
+                l = config.wipes_data.get('last') or "?"; n = config.wipes_data.get('next') or "?"
+                if c:=g.get_channel(config.LAST_WIPE_CHANNEL_ID): await c.edit(name=f"🩸 LAST WIPE: {l}")
+                if c:=g.get_channel(config.NEXT_WIPE_CHANNEL_ID): await c.edit(name=f"💀 NEXT WIPE: {n}")
+                await interaction.followup.send("✅ Done", ephemeral=True)
+            except: await interaction.followup.send("❌ Error", ephemeral=True)
+
+class WipeSubView(discord.ui.View):
+    def __init__(self): super().__init__(timeout=None); self.add_item(WipeSelect()); self.add_item(BackButton())
+
+# --- 5. ECONOMY SUB-MENU ---
 class EconomySelect(discord.ui.Select):
     def __init__(self):
         options = [discord.SelectOption(label="Manage Points", emoji="💳", description="Add/Remove User Points")]
@@ -262,55 +322,11 @@ class BackButton(discord.ui.Button):
         desc = "**Page: Home**\n\n"
         desc += f"🏰 **Base Tour**\n↳ Manage Start, Vote & Finish events.\n\n"
         desc += f"🎉 **Events & Giveaways**\n↳ Manage Giveaways and Vault events.\n\n"
+        desc += f"📅 **Wipe & Polls**\n↳ Configure Season dates and Polls.\n\n"
         desc += f"💰 **Economy**\n↳ Manage player points."
         embed.description = desc
         embed.set_footer(text="Select A Category - Click Here")
         await interaction.response.edit_message(embed=embed, view=HomeView())
-
-# ==========================================
-# 🧭 WIPE NAVIGATION SYSTEM (/config_wipe)
-# ==========================================
-class WipeSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="Set Next Wipe", emoji="📅", description="Configure wipe date"),
-            discord.SelectOption(label="Finish Polls", emoji="📊", description="Publish poll results"),
-            discord.SelectOption(label="Force Update Channels", emoji="🔄", description="Refresh voice channels")
-        ]
-        super().__init__(placeholder="Select Wipe Action...", min_values=1, max_values=1, options=options)
-    async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == "Set Next Wipe": await interaction.response.send_modal(WipeConfigModal())
-        elif self.values[0] == "Finish Polls":
-            await interaction.response.defer(ephemeral=True)
-            polls_ch = interaction.guild.get_channel(config.POLLS_CHANNEL_ID)
-            if not polls_ch: return
-            results = []
-            async for m in polls_ch.history(limit=50):
-                if "----" in m.content or not m.reactions: continue
-                try: 
-                    win = max(m.reactions, key=lambda r: r.count)
-                    if win.count > 1:
-                        q, a = parse_poll_result(m.content, win.emoji)
-                        results.append(f"{config.HELL_ARROW} **{q}** : {a}")
-                except: continue
-            if results:
-                embed = discord.Embed(title="📢 POLL RESULTS", description="\n".join(reversed(results)), color=0x990000)
-                await interaction.followup.send(embed=embed)
-            else: await interaction.followup.send("❌ No polls found.", ephemeral=True)
-        elif self.values[0] == "Force Update Channels":
-            await interaction.response.defer(ephemeral=True)
-            try:
-                g = interaction.guild
-                l = config.wipes_data.get('last') or "?"; n = config.wipes_data.get('next') or "?"
-                if c:=g.get_channel(config.LAST_WIPE_CHANNEL_ID): await c.edit(name=f"🩸 LAST WIPE: {l}")
-                if c:=g.get_channel(config.NEXT_WIPE_CHANNEL_ID): await c.edit(name=f"💀 NEXT WIPE: {n}")
-                await interaction.followup.send("✅ Done", ephemeral=True)
-            except: await interaction.followup.send("❌ Error", ephemeral=True)
-
-class WipeView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(WipeSelect())
 
 # ==========================================
 # ⚙️ SYSTEMS COG (MAIN)
@@ -337,6 +353,7 @@ class Systems(commands.Cog):
         desc = "**Page: Home**\n\n"
         desc += f"🏰 **Base Tour**\n↳ Manage Start, Vote & Finish events.\n\n"
         desc += f"🎉 **Events & Giveaways**\n↳ Manage Giveaways and Vault events.\n\n"
+        desc += f"📅 **Wipe & Polls**\n↳ Configure Season dates and Polls.\n\n"
         desc += f"💰 **Economy**\n↳ Manage player points."
         
         embed.description = desc
@@ -344,12 +361,12 @@ class Systems(commands.Cog):
         
         await interaction.response.send_message(embed=embed, view=HomeView(), ephemeral=True)
 
-    @app_commands.command(name="config_wipe", description="ADMIN: Wipe & Polls Manager")
+    @app_commands.command(name="config_wipe", description="ADMIN: Quick Wipe Config")
     async def config_wipe_menu(self, interaction: discord.Interaction):
          if not interaction.user.guild_permissions.administrator: return
-         embed = discord.Embed(title="📅 **WIPE MANAGER**", description="**Page: Wipe Configuration**\n\nManage server wipe cycles and polls.\nSelect an action below.", color=0x2b2d31)
+         embed = discord.Embed(title="📅 **WIPE MANAGER**", description="**Page: Wipe & Polls**\n\nConfigure server wipes and publish results.\nSelect an action below.", color=0x2b2d31)
          embed.add_field(name="Current Data", value=f"Last: `{config.wipes_data.get('last', '?')}`\nNext: `{config.wipes_data.get('next', '?')}`", inline=False)
-         await interaction.response.send_message(embed=embed, view=WipeView(), ephemeral=True)
+         await interaction.response.send_message(embed=embed, view=WipeSubView(), ephemeral=True)
 
     @commands.command(name="wipe")
     async def wipe_cmd(self, ctx):
